@@ -154,6 +154,13 @@ async function allArticles() {
  */
 async function rebuild() {
   const { site, tax, manifesto } = await loadConfigBundle();
+  // Pages link style.css?v=<version>. Early deploys served the stylesheet as
+  // immutable for a year, so a changed stylesheet needs a new URL or returning
+  // readers never see it. The staging object's ETag is a content hash already;
+  // pipeline/build.mjs does the same with a sha256 of the local file.
+  const css = (await store.list("assets/style.css")).find((o) => o.key === "assets/style.css");
+  if (!css) throw new Error("assets/style.css is missing from staging; deploy the site assets before rebuilding pages.");
+  site.assetVersion = css.etag.slice(0, 10);
   const articles = (await allArticles()).filter((a) => a.status === "published");
   const { files } = renderSite({ site, tax, manifesto, articles });
 
