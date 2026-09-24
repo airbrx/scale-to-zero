@@ -308,6 +308,25 @@ because that is better than an IP database.
 
 ### Reprocessing
 
+### It runs itself, twice a day
+
+An EventBridge rule (`stz-stats-twice-daily`, 07:00 and 19:00 UTC: midnight and
+noon Pacific) invokes the admin Lambda directly with `{"job":"process-stats"}`,
+which runs exactly what the Refresh button does. The stats are never more than
+half a day behind, and no run inherits a week of backlog.
+
+```bash
+node infra/schedule-stats.mjs            # create or update the schedule
+node infra/schedule-stats.mjs --status   # the rule, and the last runs from CloudWatch
+node infra/schedule-stats.mjs --remove
+```
+
+The function accepts that one job payload and refuses every other direct
+invocation. Each run logs one JSON line (`processed`, `batches`, `truncated`,
+`ms`); a failure shows up in the function's error metric. An incremental run
+keeps taking 300-file batches until it has caught up or nears the timeout, so a
+backlog clears in one run, whether scheduled or clicked.
+
 `POST /api/stats` is incremental. `POST /api/stats?force=1` — the **Rebuild**
 button — clears the processed set and re-reads every log object still in the
 bucket. That is needed whenever `stats.mjs` learns a new dimension: days already

@@ -206,6 +206,16 @@ t("malformed admin list is 400", (await call("PUT", "/admins", { body: { admins:
 t("stats without logging is 503", (await call("GET", "/stats")).status, 503);
 t("session exchange", (await call("POST", "/session")).json.email, OWNER);
 
+// --------------------------------------------------------- scheduled stats
+// The Lambda's only non-HTTP path: EventBridge's {"job":"process-stats"}.
+const { handler } = await import("../admin/server.mjs");
+await assert.rejects(handler({ job: "process-stats" }), /LOG_BUCKET is not configured/, "a scheduled run with logging off fails loudly");
+await assert.rejects(handler({ job: "delete-everything" }), /unrecognised direct invocation/, "unknown direct invocations are refused");
+await assert.rejects(handler({}), /unrecognised direct invocation/, "an empty event is refused");
+n += 3;
+const viaUrl = await handler({ requestContext: { http: { method: "GET", path: "/api/health" } }, rawPath: "/api/health", headers: {} });
+t("HTTP events still route normally", viaUrl.statusCode, 200);
+
 // ------------------------------------------------------- articles on disk
 // pipeline/build.mjs enforces this too; here it fails before a build does.
 for (const f of (await readdir(new URL("../articles/", import.meta.url))).filter((f) => f.endsWith(".json"))) {

@@ -249,6 +249,31 @@ async function statsGuard() {
   if (!store.LOG_BUCKET) throw new HttpError(503, "Access logging is not enabled. Run infra/enable-logging.mjs.");
 }
 
+/**
+ * Fold newly delivered CloudFront log objects into the stored report. Shared
+ * by the admin's Refresh button (POST /api/stats) and the twice-daily
+ * schedule, so both do exactly the same work.
+ *
+ * processLogs takes at most 300 objects per call and says `truncated` when
+ * more are waiting. An incremental run keeps taking batches until it has
+ * caught up or is close to the Lambda's timeout, so a backlog clears in one
+ * run instead of one batch per click. A forced rebuild is one pass, as before.
+ */
+async function foldNewLogs({ force = false, budgetMs = 40_000 } = {}) {
+  const started = Date.now();
+  const ownHost = new URL((await loadConfigBundle()).site.baseUrl).hostname;
+  const run = () => processLogs({ s3: store.s3, logBucket: store.LOG_BUCKET, store, ownHost, force });
+  let result = await run();
+  let batches = 1;
+  let processed = result.processed;
+  while (!force && result.truncated && Date.now() - started < budgetMs) {
+    result = await run();
+    batches++;
+    processed += result.processed;
+  }
+  return { ...result, processed, batches, ms: Date.now() - started };
+}
+
 function statsWindow(query) {
   const days = Math.min(Number(query.get("days") ?? 30) || 30, 365);
   // ?date= scopes a read to one day, on both the summary and the detail.
@@ -453,12 +478,7 @@ const HANDLERS = {
   // A command: fold newly delivered log objects into the stored daily report.
   processStats: async ({ query }) => {
     await statsGuard();
-    const ownHost = new URL((await loadConfigBundle()).site.baseUrl).hostname;
-    const result = await processLogs({
-      s3: store.s3, logBucket: store.LOG_BUCKET, store, ownHost,
-      force: query.get("force") === "1",
-    });
-    return json(200, result);
+    return json(200, await foldNewLogs({ force: query.get("force") === "1" }));
   },
 
   // ---- publish
@@ -573,8 +593,35 @@ export async function handleRequest({ method, pathname, query, headers, body }) 
   }
 }
 
+// ------------------------------------------------------------ scheduled stats
+/**
+ * Twice a day, so the stats are never a week of backlog behind. Throws if it
+ * cannot run: a failed scheduled invocation shows up in the Lambda's error
+ * metric and CloudWatch Logs, where a quietly empty result would not.
+ */
+async function runScheduledStats() {
+  if (!store.LOG_BUCKET) throw new Error("scheduled stats: LOG_BUCKET is not configured on the function");
+  const result = await foldNewLogs();
+  // One structured line per run, for CloudWatch Logs Insights.
+  console.log(JSON.stringify({ job: "process-stats", ...result }));
+  if (result.truncated) {
+    console.warn(JSON.stringify({ job: "process-stats", warning: "stopped at the time budget with logs still waiting; the next run continues" }));
+  }
+  return result;
+}
+
 // -------------------------------------------------------- Lambda Function URL
 export async function handler(event) {
+  // Not an HTTP request: a direct invocation. Only callers holding
+  // lambda:InvokeFunction can make one -- today, the EventBridge rule from
+  // infra/schedule-stats.mjs -- and the one thing this path does is fold new
+  // access logs into the stats, exactly as the admin's Refresh button does.
+  // Anything else is refused loudly rather than treated as a web request.
+  if (!event?.requestContext?.http) {
+    if (event?.job === "process-stats") return runScheduledStats();
+    throw new Error(`stz-admin: unrecognised direct invocation (${JSON.stringify(event).slice(0, 200)})`);
+  }
+
   const rc = event.requestContext ?? {};
   const method = rc.http?.method ?? "GET";
   const rawPath = rc.http?.path ?? event.rawPath ?? "/";
