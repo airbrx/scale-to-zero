@@ -19,6 +19,11 @@ import { PATTERNS } from "../assets/scorecard/lib/narrate/patterns.js";
 import { expand, seeded, article, pluralize, numberWord, list, clauseList } from "../assets/scorecard/lib/narrate/grammar.js";
 import { renderSite } from "../shared/render.mjs";
 
+// A fake AWS key for the secret-scanner tests, assembled at runtime so the
+// repository itself never contains a key-shaped string -- otherwise this repo's
+// own scorecard (and every other scanner) flags its tests.
+const FAKE_KEY = ["AKIA", "QWERTYUIOPASDFGH"].join("");
+
 let n = 0;
 const t = (label, got, want) => {
   n++;
@@ -115,7 +120,7 @@ const deps = Object.fromEntries([
 ]);
 const bloated = await scoreRepo(memoryRepo({
   "package.json": JSON.stringify({ name: "bloated", dependencies: deps }),
-  "server.js": `const express = require("express");\nconst app = express();\nconst KEY = "AKIAQWERTYUIOPASDFGH";\nsetInterval(() => {}, 1000);\napp.listen(process.env.PORT || 3000);\n`,
+  "server.js": `const express = require("express");\nconst app = express();\nconst KEY = "${FAKE_KEY}";\nsetInterval(() => {}, 1000);\napp.listen(process.env.PORT || 3000);\n`,
   ".env": "DB_PASSWORD=hunter2\n",
   "docker-compose.yml": "services:\n  app:\n    build: .\n  postgres:\n    image: postgres:16\n  redis:\n    image: redis:7\n  worker:\n    build: .\n",
   "infra/main.tf": `resource "aws_instance" "web" {}\nresource "aws_db_instance" "db" {}\nresource "aws_nat_gateway" "nat" {}\nresource "aws_lb" "lb" {}\n`,
@@ -154,12 +159,12 @@ t("bloated: deprecated", status(bloated, "node.deprecated"), "warn");
 t("bloated: node version", status(bloated, "node.node-version"), "warn");
 // The key must not appear anywhere on the card, including checks that quote a
 // line of source for other reasons.
-t("bloated: secret appears nowhere on the card", JSON.stringify(bloated).includes("AKIAQWERTYUIOPASDFGH"), false);
+t("bloated: secret appears nowhere on the card", JSON.stringify(bloated).includes(FAKE_KEY), false);
 const keyOnListenLine = await scoreRepo(memoryRepo({
   "package.json": JSON.stringify({ name: "k", dependencies: { express: "^4.0.0" } }),
-  "server.js": `const k = "AKIAQWERTYUIOPASDFGH"; app.listen(3000);`,
+  "server.js": `const k = "${FAKE_KEY}"; app.listen(3000);`,
 }, {}, http));
-t("secret on a quoted line is redacted", JSON.stringify(keyOnListenLine).includes("AKIAQWERTYUIOPASDFGH"), false);
+t("secret on a quoted line is redacted", JSON.stringify(keyOnListenLine).includes(FAKE_KEY), false);
 
 // A server on the Lambda Web Adapter scales to zero even though it listens.
 const lwa = await scoreRepo(memoryRepo({
@@ -284,7 +289,7 @@ for (const [label, card] of Object.entries(cards)) {
   for (let seed = 0; seed < 300; seed++) {
     const { text } = narrate(card, { seed });
     texts.add(text);
-    const bad = [/[{}]/, /\[|\]/, /\(\(|\)\)/, /undefined|NaN|\bnull\b/, / {2}/, / [,.;:](?=\s|$)/, /\w\.(env|gitignore)\b/, /[,;]{2}|\.\./, /AKIAQWERTYUIOPASDFGH/]
+    const bad = [/[{}]/, /\[|\]/, /\(\(|\)\)/, /undefined|NaN|\bnull\b/, / {2}/, / [,.;:](?=\s|$)/, /\w\.(env|gitignore)\b/, /[,;]{2}|\.\./, new RegExp(FAKE_KEY)]
       .find((re) => re.test(text.replace(/\n+/g, " ")));
     if (bad) assert.fail(`narrate ${label} seed ${seed} matched ${bad}:\n${text}`);
   }
