@@ -114,7 +114,8 @@ function footprint(repo, facts) {
   return {
     files: repo.files.length,
     bytes: repo.sizesKnown ? repo.files.reduce((s, f) => s + (f.size ?? 0), 0) : null,
-    languages: Object.entries(byLang).sort((a, b) => b[1] - a[1]).slice(0, 6),
+    // Every language, largest first; the page folds the tail into "Other".
+    languages: Object.entries(byLang).sort((a, b) => b[1] - a[1]),
     directDeps: facts.node ? facts.node.prodDeps.length : null,
     devDeps: facts.node ? facts.node.devDeps.length : null,
     installedPackages: facts.node?.lock?.count ?? null,

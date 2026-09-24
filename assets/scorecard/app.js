@@ -11,6 +11,7 @@ import { parseRepoUrl, targetLabel, openRepo } from "./lib/source.js";
 import { scoreRepo, ENGINE_VERSION, ruleGradeFor } from "./lib/engine.js";
 import * as cache from "./lib/cache.js";
 import { narrate } from "./lib/narrate/index.js";
+import { ICONS } from "./icons.js";
 
 const $ = (id) => document.getElementById(id);
 const form = $("sc-form");
@@ -22,6 +23,9 @@ const recentEl = $("sc-recent");
 
 const STATUS_LABEL = { pass: "Pass", warn: "Warn", fail: "Fail", na: "N/A", error: "Error" };
 const EVIDENCE_SHOWN = 25;
+const SVG_NS = "http://www.w3.org/2000/svg";
+// Status is never color alone: each chip carries an icon and a word.
+const STATUS_ICON = { pass: "circleCheck", warn: "triangleExclamation", fail: "circleXmark", na: "circleMinus", error: "circleExclamation" };
 
 /** Tiny element builder. Strings become text nodes, never markup. */
 function h(tag, attrs = {}, ...kids) {
@@ -138,7 +142,7 @@ function render(card, { label, cached, cacheError = null }) {
   const counts = card.counts;
   const tally = h("p", { class: "sc-tally" },
     ["pass", "warn", "fail", "na", "error"].filter((s) => counts[s]).map((s) =>
-      h("span", { class: `sc-chip sc-chip-${s}` }, `${counts[s]} ${STATUS_LABEL[s]}`)));
+      h("span", { class: `sc-chip sc-chip-${s}` }, icon(STATUS_ICON[s], "sc-chip-icon"), `${counts[s]} ${STATUS_LABEL[s]}`)));
 
   // The narrative is written at render time, from the card, so cached cards
   // get it too and a phrasebook change needs no rescan. If it fails, say so:
@@ -160,17 +164,80 @@ function render(card, { label, cached, cacheError = null }) {
   resultEl.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+const compact = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
+const fmtCount = (n) => (n < 10000 ? n.toLocaleString() : compact.format(n));
+
+/** A Font Awesome icon as inline SVG (see icons.js). Decorative: the label says it. */
+function icon(name, cls = "sc-icon") {
+  const [viewBox, d] = ICONS[name];
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("viewBox", viewBox);
+  svg.setAttribute("class", cls);
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  const p = document.createElementNS(SVG_NS, "path");
+  p.setAttribute("d", d);
+  p.setAttribute("fill", "currentColor");
+  svg.append(p);
+  return svg;
+}
+
+/**
+ * The footprint: a KPI row of stat tiles, then the language mix as one
+ * part-to-whole bar. Values are compacted (2.9K); the exact figure is in each
+ * tile's tooltip. A tile marked `alert` is a number the manifesto counts
+ * against the repo, and says so with its color and its label, never color alone.
+ */
 function footprint(f) {
-  const rows = [
-    ["Files", f.files.toLocaleString()],
-    f.bytes !== null && ["Size", fmtBytes(f.bytes)],
-    f.languages.length && ["Languages", f.languages.map(([l, n]) => `${l} ${n}`).join(", ")],
-    f.directDeps !== null && ["Runtime deps", `${f.directDeps} (+${f.devDeps} dev)`],
-    f.installedPackages !== null && ["Installed packages", f.installedPackages.toLocaleString()],
-    f.alwaysOn !== null && ["Always-on resources", f.alwaysOn],
-    f.externalScripts !== null && ["Script origins", f.externalScripts],
+  const tiles = [
+    { icon: "fileLines", label: "Files", value: fmtCount(f.files), exact: f.files.toLocaleString() },
+    f.bytes !== null && { icon: "hardDrive", label: "Size", value: fmtBytes(f.bytes), exact: `${f.bytes.toLocaleString()} bytes` },
+    f.directDeps !== null && { icon: "cubes", label: "Runtime deps", value: fmtCount(f.directDeps), sub: f.devDeps ? `+${f.devDeps} dev` : null, exact: `${f.directDeps} runtime, ${f.devDeps} dev-only` },
+    f.installedPackages !== null && { icon: "boxesStacked", label: "Installed", value: fmtCount(f.installedPackages), exact: `${f.installedPackages.toLocaleString()} packages in the lockfile`, alert: f.installedPackages > 300 },
+    f.alwaysOn !== null && { icon: "server", label: "Always-on", value: String(f.alwaysOn), exact: `${f.alwaysOn} resources that bill while idle`, alert: f.alwaysOn > 0 },
+    f.externalScripts !== null && { icon: "globe", label: "Script origins", value: String(f.externalScripts), exact: `scripts load from ${f.externalScripts} outside origin(s)`, alert: f.externalScripts > 2 },
   ].filter(Boolean);
-  return h("dl", { class: "sc-footprint" }, rows.map(([k, v]) => h("div", {}, h("dt", {}, k), h("dd", {}, String(v)))));
+
+  const tileEls = tiles.map((t) => h("div", { class: t.alert ? "sc-tile sc-tile-alert" : "sc-tile", title: t.exact },
+    h("span", { class: "sc-tile-label" }, icon(t.icon), t.label),
+    h("span", { class: "sc-tile-value" }, t.value, t.sub ? h("span", { class: "sc-tile-sub" }, t.sub) : null)));
+
+  return h("section", { class: "sc-footprint", "aria-label": "Footprint" },
+    h("div", { class: "sc-tiles" }, tileEls),
+    f.languages.length ? languageBar(f.languages) : null);
+}
+
+/**
+ * Part-to-whole: the four largest languages in the validated categorical order
+ * (slots 1-4 pass CVD and contrast checks as neighbours), the rest folded into
+ * a gray "Other". Every segment is named in the legend with its share, so no
+ * language is identified by color alone.
+ */
+function languageBar(languages) {
+  const total = languages.reduce((s, [, n]) => s + n, 0);
+  const top = languages.slice(0, 4);
+  const rest = languages.slice(4);
+  const parts = top.map(([name, n], i) => ({ name, n, cls: `sc-lang-${i + 1}` }));
+  if (rest.length) {
+    parts.push({ name: rest.length === 1 ? rest[0][0] : `Other (${rest.length})`, n: rest.reduce((s, [, n]) => s + n, 0), cls: "sc-lang-other",
+      detail: rest.map(([l, n]) => `${l} ${n}`).join(", ") });
+  }
+  const pct = (n) => (n / total) * 100;
+  const pctText = (n) => (pct(n) < 1 ? "<1%" : `${Math.round(pct(n))}%`);
+  const tip = (p) => `${p.name}: ${pctText(p.n)} · ${p.n.toLocaleString()} file${p.n === 1 ? "" : "s"}${p.detail ? ` (${p.detail})` : ""}`;
+
+  const bar = h("div", { class: "sc-langbar", role: "img", "aria-label": `Languages by file count: ${parts.map((p) => `${p.name} ${pctText(p.n)}`).join(", ")}` },
+    parts.map((p) => {
+      const seg = h("span", { class: `sc-langseg ${p.cls}`, title: tip(p) });
+      seg.style.setProperty("--w", `${Math.max(pct(p.n), 0.8)}%`);
+      return seg;
+    }));
+
+  return h("div", { class: "sc-langs" },
+    h("span", { class: "sc-tile-label" }, "Languages", h("span", { class: "sc-langs-total" }, `${total.toLocaleString()} source files`)),
+    bar,
+    h("ul", { class: "sc-langlegend" }, parts.map((p) => h("li", { title: tip(p) },
+      h("span", { class: `sc-swatch ${p.cls}` }), p.name, h("span", { class: "sc-langpct" }, pctText(p.n))))));
 }
 
 /**
@@ -253,7 +320,7 @@ function check(c) {
   const shown = c.evidence.slice(0, EVIDENCE_SHOWN);
   const more = c.evidence.length - shown.length;
   return h("li", { class: `sc-check sc-check-${c.status}` },
-    h("span", { class: `sc-chip sc-chip-${c.status}` }, STATUS_LABEL[c.status]),
+    h("span", { class: `sc-chip sc-chip-${c.status}` }, icon(STATUS_ICON[c.status], "sc-chip-icon"), STATUS_LABEL[c.status]),
     h("div", { class: "sc-check-body" },
       h("p", { class: "sc-check-title" }, c.title),
       h("p", { class: "sc-check-summary" }, c.summary),

@@ -492,23 +492,69 @@ a { color: inherit; }
 .sc-principle-story { margin: .45rem 0 0; font-family: var(--serif); font-size: .95rem; color: var(--ink-soft); max-width: var(--measure); }
 
 .sc-chip {
-  display: inline-block; flex: 0 0 auto; min-width: 3.4rem; text-align: center;
+  display: inline-flex; align-items: center; justify-content: center; gap: .3rem;
+  flex: 0 0 auto; min-width: 3.4rem;
   padding: .18rem .45rem; border-radius: 2px;
   font-family: var(--mono); font-size: .62rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
   color: #fff; background: var(--ink-faint);
 }
+.sc-chip-icon { width: .8em; height: .8em; flex: 0 0 auto; }
 .sc-chip-pass { background: var(--accent-2); }
 .sc-chip-warn { background: var(--warn); }
 .sc-chip-fail, .sc-chip-error { background: var(--accent); }
 .sc-chip-na { background: transparent; color: var(--ink-faint); border: 1px solid var(--rule); }
 
+/* ------------------------------------------------------------- footprint
+   A KPI row, then the language mix as one part-to-whole bar. Values in the
+   sans at a size that reads at a glance; labels small and quiet. */
 .sc-footprint {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: .6rem;
-  margin: 1.4rem 0 0; padding: 0;
+  margin: 1.4rem 0 0;
+  background: var(--card); border: 1px solid var(--rule); border-radius: 3px;
+  --lang-1: #2a78d6; --lang-2: #eb6834; --lang-3: #1baf7a; --lang-4: #eda100; --lang-other: #b9b6ae;
 }
-.sc-footprint div { background: var(--card); border: 1px solid var(--rule); border-radius: 3px; padding: .55rem .75rem; min-width: 0; }
-.sc-footprint dt { font-family: var(--mono); font-size: .6rem; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-faint); }
-.sc-footprint dd { margin: .15rem 0 0; font-family: var(--serif); font-size: 1.05rem; font-weight: 600; overflow-wrap: anywhere; }
+/* The dark steps are the same four hues re-validated for the dark surface. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .sc-footprint { --lang-1: #3987e5; --lang-2: #d95926; --lang-3: #199e70; --lang-4: #c98500; --lang-other: #5d5a55; }
+}
+:root[data-theme="dark"] .sc-footprint { --lang-1: #3987e5; --lang-2: #d95926; --lang-3: #199e70; --lang-4: #c98500; --lang-other: #5d5a55; }
+
+.sc-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.8rem, 1fr)); overflow: hidden; }
+.sc-tile {
+  display: flex; flex-direction: column; gap: .15rem; min-width: 0;
+  padding: .65rem .8rem;
+  border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+  margin: 0 -1px -1px 0; /* collapse the shared borders at the grid edges */
+}
+.sc-tile-label {
+  display: flex; align-items: center; gap: .35rem;
+  font-family: var(--mono); font-size: .6rem; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-faint);
+  white-space: nowrap;
+}
+.sc-icon { width: .85rem; height: .85rem; flex: 0 0 auto; color: var(--ink-faint); }
+.sc-tile-value {
+  font-family: var(--sans); font-size: 1.35rem; font-weight: 650; line-height: 1.15;
+  letter-spacing: -0.01em; color: var(--ink);
+}
+.sc-tile-sub { margin-left: .35rem; font-size: .72rem; font-weight: 500; color: var(--ink-faint); letter-spacing: 0; }
+/* A number the manifesto counts against the repo: the label says so too. */
+.sc-tile-alert .sc-icon, .sc-tile-alert .sc-tile-value { color: var(--accent); }
+
+.sc-langs { padding: .7rem .8rem .75rem; display: flex; flex-direction: column; gap: .45rem; border-top: 1px solid var(--rule); }
+.sc-langs-total { margin-left: auto; letter-spacing: .04em; text-transform: none; }
+.sc-langbar { display: flex; gap: 2px; height: .6rem; }
+.sc-langseg { flex: 0 0 auto; width: var(--w); min-width: 3px; background: var(--lang-other); }
+.sc-langseg:first-child { border-radius: 4px 0 0 4px; }
+.sc-langseg:last-child { border-radius: 0 4px 4px 0; }
+.sc-langseg:only-child { border-radius: 4px; }
+.sc-langlegend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .25rem 1rem; font-size: .8rem; color: var(--ink-soft); }
+.sc-langlegend li { display: flex; align-items: center; gap: .35rem; }
+.sc-swatch { width: .65rem; height: .65rem; border-radius: 2px; background: var(--lang-other); }
+.sc-langpct { font-family: var(--mono); font-size: .72rem; color: var(--ink-faint); }
+.sc-lang-1 { background: var(--lang-1); }
+.sc-lang-2 { background: var(--lang-2); }
+.sc-lang-3 { background: var(--lang-3); }
+.sc-lang-4 { background: var(--lang-4); }
+.sc-lang-other { background: var(--lang-other); }
 
 .sc-principles { list-style: none; margin: 2.2rem 0 0; padding: 0; }
 .sc-principle { padding: 1.3rem 0; border-top: 1px solid var(--rule); }
