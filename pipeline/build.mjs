@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 import { renderSite } from "../shared/render.mjs";
+import { validator } from "../shared/schema.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SITE = path.join(ROOT, "site");
@@ -31,10 +32,17 @@ config.site.assetVersion = createHash("sha256")
 const tax = await readJson("pipeline/taxonomy.json");
 const manifesto = await readJson("content/manifesto.json");
 
+// Every article, draft or not, must match the Article schema in the API
+// contract -- the same check the admin applies on save. A malformed file fails
+// the build here, naming the field, instead of rendering wrong.
+const validate = validator(await readJson("admin/openapi.json"));
+
 const files = (await readdir(path.join(ROOT, "articles"))).filter((f) => f.endsWith(".json"));
 const articles = [];
 for (const f of files) {
   const a = await readJson(path.join("articles", f));
+  const problems = validate("Article", a);
+  if (problems.length) throw new Error(`articles/${f} does not match the Article schema (admin/openapi.json):\n  ${problems.join("\n  ")}`);
   if (a.status !== "published") {
     console.log(`  skip (${a.status}) ${f}`);
     continue;

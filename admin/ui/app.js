@@ -13,6 +13,9 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
 let me = null;
 let taxonomy = { categories: {}, flatStackAngles: {} };
 let editing = null;
+// The ETag of the article as it was opened. Saves send it as If-Match, so a
+// save over someone else's newer edit is refused (412) instead of erasing it.
+let editingEtag = null;
 let editor = null;   // the CKEditor instance
 let dirty = false;
 
@@ -128,7 +131,10 @@ async function loadArticles() {
 $("articleList").addEventListener("click", async (ev) => {
   const edit = ev.target.dataset.edit;
   const del = ev.target.dataset.del;
-  if (edit) return openEditor(await auth.api(`/articles/${edit}`));
+  if (edit) {
+    const { data, etag } = await auth.apiWithEtag(`/articles/${edit}`);
+    return openEditor(data, etag);
+  }
   if (del) {
     if (!confirm(`Delete ${del}? This removes the article and its rendered page from staging.`)) return;
     await auth.api(`/articles/${del}`, { method: "DELETE" });
@@ -208,8 +214,9 @@ async function ensureEditor() {
   return editor;
 }
 
-async function openEditor(a) {
+async function openEditor(a, etag = null) {
   editing = a;
+  editingEtag = etag;
   err($("editErr"), null);
   $("editorTitle").textContent = a ? "Edit article" : "New article";
 
@@ -378,7 +385,14 @@ $("saveArticle").addEventListener("click", async () => {
   btn.disabled = true;
   $("saveState").textContent = "saving...";
   try {
-    if (editing) await auth.api(`/articles/${editing.slug}`, { method: "PUT", body: JSON.stringify(payload) });
+    // PATCH, not PUT: the editor sends the fields it edits (not tags, for one),
+    // and the rest of the stored article must survive the save.
+    if (editing) {
+      await auth.api(`/articles/${editing.slug}`, {
+        method: "PATCH", body: JSON.stringify(payload),
+        headers: editingEtag ? { "if-match": editingEtag } : {},
+      });
+    }
     else await auth.api("/articles", { method: "POST", body: JSON.stringify(payload) });
     dirty = false;
     clearLocalDraft();
@@ -1017,8 +1031,8 @@ async function restoreLocalDraft() {
 Restore it into the editor?`)) {
     return clearLocalDraft();
   }
-  const existing = d.slug ? await auth.api(`/articles/${d.slug}`).catch(() => null) : null;
-  await openEditor(existing);
+  const existing = d.slug ? await auth.apiWithEtag(`/articles/${d.slug}`).catch(() => null) : null;
+  await openEditor(existing?.data ?? null, existing?.etag ?? null);
   $("f-headline").value = d.headline;
   $("f-dek").value = d.dek;
   (await ensureEditor()).setData(d.body);

@@ -13,9 +13,10 @@
 // unconfigured" path, and no route that reads an identity out of a request body.
 
 import { readFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { timingSafeEqual } from "node:crypto";
+import { timingSafeEqual, createHash } from "node:crypto";
 import sharp from "sharp";
 
 import {
@@ -25,6 +26,8 @@ import {
 import * as store from "./lib/store.mjs";
 import { processLogs, readReport, readDay, readDetailWindow } from "./lib/stats.mjs";
 import { renderSite } from "../shared/render.mjs";
+import { validator } from "../shared/schema.mjs";
+import { compileRoutes, matchRoute, operationIds } from "./lib/routes.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? "";
@@ -69,12 +72,13 @@ function originStatus(headers = {}) {
 const ADMINS_KEY = "admins.json";
 const MAX_BODY = 25 * 1024 * 1024;
 
-const json = (status, obj) => ({
+const json = (status, obj, extraHeaders = {}) => ({
   status,
   headers: {
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
     "x-content-type-options": "nosniff",
+    ...extraHeaders,
   },
   body: JSON.stringify(obj),
 });
@@ -174,121 +178,204 @@ async function rebuild() {
 }
 
 // -------------------------------------------------------------------- router
-async function routeApi({ method, segments, query, headers, body }) {
-  const [head, second] = segments;
+//
+// The contract is admin/openapi.json. Routes come from its paths (lib/routes.mjs)
+// and each operationId below is the one handler for that operation. The two
+// are checked against each other at cold start: an operation with no handler,
+// or a handler with no operation, stops the function from loading at all --
+// which the deploy's health check catches -- rather than surfacing later as a
+// 404 on the one route nobody tried.
 
-  // Unauthenticated liveness probe. The sign-in page no longer calls this --
-  // it reads the client id from the flat /admin/config.json in S3 -- so this
-  // exists for deploys and diagnostics.
-  //
-  // `origin` reports whether CloudFront's shared header arrived, which is what
-  // makes the lockdown verifiable before it is enforced. It reveals that an
-  // origin check exists, not what the secret is; a check nobody can see is not
-  // a check anybody can trust.
-  if (head === "health") {
-    return json(200, {
-      ok: true,
-      clientId: GOOGLE_CLIENT_ID || null,
-      origin: originStatus(headers),
-      enforcing: ORIGIN_ENFORCE,
-    });
+const SPEC = JSON.parse(readFileSync(path.join(HERE, "openapi.json"), "utf8"));
+const ROUTES = compileRoutes(SPEC);
+const validate = validator(SPEC);
+
+/** A 4xx with a message the caller may see, and optionally every problem found. */
+class HttpError extends Error {
+  constructor(status, message, details) {
+    super(message);
+    this.status = status;
+    this.details = details;
   }
+}
 
-  const actor = await requireAdmin(headers);
+/** Throw a 400 listing every way `value` fails schema `name`. */
+function mustMatch(name, value) {
+  const problems = validate(name, value);
+  if (problems.length) {
+    throw new HttpError(400, problems.length === 1 ? problems[0] : `${problems.length} problems with the request`, problems);
+  }
+}
 
-  // Exchange a verified Google ID token for a session. This is the only route
-  // that needs a Google credential; everything else runs on the session, so a
-  // one-hour ID token does not become a one-hour login.
-  if (head === "session" && method === "POST") {
+const SLUG_RE = new RegExp(SPEC.components.schemas.Slug.pattern);
+
+/** A strong validator for an article: changes whenever any byte of it does. */
+const etagOf = (article) => `"${createHash("sha256").update(JSON.stringify(article)).digest("hex").slice(0, 20)}"`;
+
+/**
+ * Optimistic concurrency. A write that carries If-Match is refused when the
+ * article has changed since the caller read it, instead of silently replacing
+ * someone else's edit. Without the header the write goes through, as it always
+ * has; the admin UI always sends it.
+ */
+function checkIfMatch(headers, current) {
+  const raw = headers["if-match"] ?? headers["If-Match"];
+  if (!raw) return;
+  if (raw.trim() === "*") return;
+  const tags = raw.split(",").map((t) => t.trim().replace(/^W\//, ""));
+  if (!tags.includes(etagOf(current))) {
+    throw new HttpError(412, "This article changed since you opened it. Reload it, reapply your edits, and save again.");
+  }
+}
+
+/** Drop keys whose value is undefined, so they neither validate nor store. */
+const defined = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined));
+
+async function loadArticle(slug) {
+  if (!SLUG_RE.test(slug)) return null;
+  return store.getJson(articleKey(slug), null);
+}
+
+async function saveArticle(article, status, extraHeaders = {}) {
+  mustMatch("Article", article);
+  await store.putJson(articleKey(article.slug), article);
+  await rebuild();
+  return json(status, article, { etag: etagOf(article), ...extraHeaders });
+}
+
+const notFound = () => json(404, { error: "No such article" });
+
+async function statsGuard() {
+  if (!store.LOG_BUCKET) throw new HttpError(503, "Access logging is not enabled. Run infra/enable-logging.mjs.");
+}
+
+function statsWindow(query) {
+  const days = Math.min(Number(query.get("days") ?? 30) || 30, 365);
+  // ?date= scopes a read to one day, on both the summary and the detail.
+  // Same parameter, same meaning, so the UI can hold one piece of state and
+  // apply it to every tab.
+  const date = query.get("date");
+  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new HttpError(400, "date must be YYYY-MM-DD");
+  return { days, date };
+}
+
+/** One handler per operationId in admin/openapi.json. */
+const HANDLERS = {
+  // Unauthenticated liveness probe. `origin` reports whether CloudFront's
+  // shared header arrived, which is what makes the lockdown verifiable before
+  // it is enforced. It reveals that an origin check exists, not the secret.
+  getHealth: async ({ headers }) => json(200, {
+    ok: true,
+    clientId: GOOGLE_CLIENT_ID || null,
+    origin: originStatus(headers),
+    enforcing: ORIGIN_ENFORCE,
+  }),
+
+  // Exchange a verified Google ID token for a session, so a one-hour ID token
+  // does not become a one-hour login.
+  createSession: async ({ actor }) => {
     const { token, expiresAt } = issueSession(actor, SESSION_SECRET);
-    return json(200, {
-      sessionToken: token, expiresAt,
-      email: actor.email, role: actor.role, name: actor.displayName,
-    });
-  }
+    return json(200, { sessionToken: token, expiresAt, email: actor.email, role: actor.role, name: actor.displayName });
+  },
 
-  if (head === "me") {
-    return json(200, { email: actor.email, role: actor.role, name: actor.displayName });
-  }
-
-  const asJson = () => {
-    if (!body || !body.length) return {};
-    try { return JSON.parse(body.toString("utf8")); }
-    catch { throw new AuthError("Request body is not valid JSON", 400); }
-  };
+  getMe: async ({ actor }) => json(200, { email: actor.email, role: actor.role, name: actor.displayName }),
 
   // ---- articles
-  if (head === "articles") {
-    if (method === "GET" && !second) {
-      const list = (await allArticles()).map((a) => ({
-        slug: a.slug, date: a.date, headline: a.headline, dek: a.dek,
-        status: a.status, templateType: a.templateType ?? "article",
-        category: a.category, categoryLabel: a.categoryLabel,
-      })).sort((x, y) => (x.date < y.date ? 1 : -1));
-      return json(200, list);
-    }
+  listArticles: async () => {
+    const list = (await allArticles()).map((a) => ({
+      slug: a.slug, date: a.date, headline: a.headline, dek: a.dek,
+      status: a.status, templateType: a.templateType ?? "article",
+      category: a.category, categoryLabel: a.categoryLabel,
+    })).sort((x, y) => (x.date < y.date ? 1 : -1));
+    return json(200, list);
+  },
 
-    if (method === "GET" && second) {
-      const a = await store.getJson(articleKey(second), null);
-      return a ? json(200, a) : json(404, { error: "No such article" });
-    }
+  getArticle: async ({ params }) => {
+    const a = await loadArticle(params.slug);
+    return a ? json(200, a, { etag: etagOf(a) }) : notFound();
+  },
 
-    if (method === "POST") {
-      const b = asJson();
-      if (!b.headline) return json(400, { error: "headline is required" });
-      const date = b.date ?? new Date().toISOString().slice(0, 10);
-      const slug = b.slug ?? `${date}-${slugify(b.headline)}`;
-      if (await store.exists(articleKey(slug))) {
-        return json(409, { error: `An article with slug ${slug} already exists` });
-      }
-      const article = {
-        slug, date,
-        status: b.status === "published" ? "published" : "draft",
-        templateType: b.templateType === "podcast" ? "podcast" : "article",
-        headline: b.headline,
-        dek: b.dek ?? "",
-        category: b.category ?? "BILL_SHOCK",
-        categoryLabel: b.categoryLabel ?? "Bill Shock",
-        flatStackAngle: b.flatStackAngle ?? "precompute-and-cache",
-        source: b.source ?? { title: "", url: "", publisher: "" },
-        body: b.body ?? "",
-        sections: b.sections ?? undefined,
-        pullQuote: b.pullQuote ?? "",
-        audio: b.audio ?? null,
-        tags: b.tags ?? [],
-        createdBy: actor.email,
-        createdAt: new Date().toISOString(),
-      };
-      await store.putJson(articleKey(slug), article);
-      const index = await store.getJson(INDEX_KEY, []);
-      if (!index.includes(slug)) await store.putJson(INDEX_KEY, [...index, slug]);
-      await rebuild();
-      return json(201, article);
+  createArticle: async ({ actor, asJson }) => {
+    const b = asJson();
+    mustMatch("ArticleCreate", b);
+    const date = b.date ?? new Date().toISOString().slice(0, 10);
+    const slug = b.slug ?? `${date}-${slugify(b.headline)}`;
+    if (await store.exists(articleKey(slug))) {
+      return json(409, { error: `An article with slug ${slug} already exists` });
     }
+    const article = defined({
+      slug, date,
+      status: b.status ?? "draft",
+      templateType: b.templateType ?? "article",
+      headline: b.headline,
+      dek: b.dek ?? "",
+      category: b.category ?? "BILL_SHOCK",
+      categoryLabel: b.categoryLabel ?? "Bill Shock",
+      flatStackAngle: b.flatStackAngle ?? "precompute-and-cache",
+      source: b.source ?? { title: "", url: "", publisher: "" },
+      body: b.body ?? "",
+      sections: b.sections,
+      pullQuote: b.pullQuote ?? "",
+      audio: b.audio ?? null,
+      tags: b.tags ?? [],
+      _brief: b._brief,
+      _sources: b._sources,
+      createdBy: actor.email,
+      createdAt: new Date().toISOString(),
+    });
+    mustMatch("Article", article);
+    // Article before index: a failed index write leaves a readable article,
+    // never an index entry pointing at nothing. One render, once it is listed.
+    await store.putJson(articleKey(slug), article);
+    const index = await store.getJson(INDEX_KEY, []);
+    if (!index.includes(slug)) await store.putJson(INDEX_KEY, [...index, slug]);
+    await rebuild();
+    return json(201, article, { etag: etagOf(article), location: `/api/articles/${slug}` });
+  },
 
-    if (method === "PUT" && second) {
-      const existing = await store.getJson(articleKey(second), null);
-      if (!existing) return json(404, { error: "No such article" });
-      // slug is the identity; changing it here would orphan the rendered file.
-      const next = { ...existing, ...asJson(), slug: existing.slug,
-        updatedBy: actor.email, updatedAt: new Date().toISOString() };
-      await store.putJson(articleKey(second), next);
-      await rebuild();
-      return json(200, next);
-    }
+  // PUT replaces every editable field; the identity and creation record stay.
+  replaceArticle: async ({ actor, params, headers, asJson }) => {
+    const existing = await loadArticle(params.slug);
+    if (!existing) return notFound();
+    checkIfMatch(headers, existing);
+    const b = asJson();
+    mustMatch("ArticleReplace", b);
+    return saveArticle(defined({
+      ...b,
+      slug: existing.slug, createdBy: existing.createdBy, createdAt: existing.createdAt,
+      updatedBy: actor.email, updatedAt: new Date().toISOString(),
+    }), 200);
+  },
 
-    if (method === "DELETE" && second) {
-      const index = await store.getJson(INDEX_KEY, []);
-      await store.putJson(INDEX_KEY, index.filter((s) => s !== second));
-      await store.remove(articleKey(second));
-      await store.remove(`${second}.html`);
-      await rebuild();
-      return json(200, { deleted: second });
-    }
-  }
+  // PATCH merges; what you leave out is kept. The slug is the page's name, so
+  // the schema refuses it rather than orphaning the rendered file.
+  updateArticle: async ({ actor, params, headers, asJson }) => {
+    const existing = await loadArticle(params.slug);
+    if (!existing) return notFound();
+    checkIfMatch(headers, existing);
+    const b = asJson();
+    mustMatch("ArticlePatch", b);
+    return saveArticle(defined({
+      ...existing, ...b,
+      slug: existing.slug, updatedBy: actor.email, updatedAt: new Date().toISOString(),
+    }), 200);
+  },
+
+  deleteArticle: async ({ params, headers }) => {
+    const existing = await loadArticle(params.slug);
+    if (!existing) return notFound();
+    checkIfMatch(headers, existing);
+    const slug = existing.slug;
+    const index = await store.getJson(INDEX_KEY, []);
+    await store.putJson(INDEX_KEY, index.filter((s) => s !== slug));
+    await store.remove(articleKey(slug));
+    await store.remove(`${slug}.html`);
+    await rebuild();
+    return json(200, { deleted: slug });
+  },
 
   // ---- media: images are resized here, audio is stored as uploaded
-  if (head === "media" && method === "POST") {
+  uploadMedia: async ({ query, body }) => {
     const kind = query.get("kind") ?? "image";
     const filename = query.get("filename") ?? `upload-${Date.now()}`;
     if (!body?.length) return json(400, { error: "Empty upload" });
@@ -321,86 +408,101 @@ async function routeApi({ method, segments, query, headers, body }) {
     }
 
     return json(400, { error: `Unknown media kind: ${kind}` });
-  }
+  },
 
   // ---- admins: readable by any admin, writable by owners only
-  if (head === "admins") {
-    if (method === "GET") {
-      return json(200, { admins: await loadAdmins(), roles: ROLES, you: actor.email });
-    }
-    if (method === "PUT") {
-      if (!isOwner(actor)) return json(403, { error: "Only an owner can change the admin list" });
-      const next = normalizeAdmins(asJson());
-      validateAdminListChange(next, actor);
-      await store.putJson(ADMINS_KEY, {
-        admins: next, updatedBy: actor.email, updatedAt: new Date().toISOString(),
-      });
-      return json(200, { admins: next });
-    }
-  }
+  getAdmins: async ({ actor }) => json(200, { admins: await loadAdmins(), roles: ROLES, you: actor.email }),
+
+  replaceAdmins: async ({ actor, asJson }) => {
+    if (!isOwner(actor)) return json(403, { error: "Only an owner can change the admin list" });
+    const b = asJson();
+    mustMatch("AdminListUpdate", b);
+    const next = normalizeAdmins(b);
+    validateAdminListChange(next, actor);
+    await store.putJson(ADMINS_KEY, { admins: next, updatedBy: actor.email, updatedAt: new Date().toISOString() });
+    return json(200, { admins: next });
+  },
 
   // ---- stats: CloudFront access logs, processed on demand
-  if (head === "stats") {
-    if (!store.LOG_BUCKET) {
-      return json(503, { error: "Access logging is not enabled. Run infra/enable-logging.mjs." });
-    }
-    if (method === "GET") {
-      const days = Math.min(Number(query.get("days") ?? 30) || 30, 365);
-      // ?date= scopes a read to one day, on both the summary and the detail.
-      // Same parameter, same meaning, so the UI can hold one piece of state and
-      // apply it to every tab.
-      const date = query.get("date");
-      if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        return json(400, { error: "date must be YYYY-MM-DD" });
-      }
+  getStats: async ({ query }) => {
+    await statsGuard();
+    const { days, date } = statsWindow(query);
+    const report = await readReport(store, days, date);
+    // A day outside the window would otherwise come back as a page of zeroes,
+    // which reads as "no traffic that day" rather than "you asked for a day
+    // this window does not cover".
+    if (date && !report.scope) return json(404, { error: `No processed logs for ${date} in the last ${days} days` });
+    return json(200, report);
+  },
 
-      // /stats/detail   the drill-down tabs: geo, bots, acquisition, security.
-      // Rolled across the same window as the summary unless ?date= names one
-      // day. Kept off the default GET because it is a read per day in the
-      // window, and the overview must stay one object.
-      if (second === "detail") {
-        if (date) {
-          const one = await readDay(store, date);
-          return one ? json(200, one) : json(404, { error: `No processed logs for ${date}` });
-        }
-        const report = await readReport(store, days);
-        const detail = await readDetailWindow(store, report.dates);
-        return json(200, detail ?? { date: null, empty: true });
-      }
+  // The drill-down tabs: geo, bots, acquisition, security. Kept off the
+  // summary because it is a read per day in the window, and the overview must
+  // stay one object.
+  getStatsDetail: async ({ query }) => {
+    await statsGuard();
+    const { days, date } = statsWindow(query);
+    if (date) {
+      const one = await readDay(store, date);
+      return one ? json(200, one) : json(404, { error: `No processed logs for ${date}` });
+    }
+    const report = await readReport(store, days);
+    const detail = await readDetailWindow(store, report.dates);
+    return json(200, detail ?? { date: null, empty: true });
+  },
 
-      const report = await readReport(store, days, date);
-      // A day outside the window would otherwise come back as a page of
-      // zeroes, which reads as "no traffic that day" rather than "you asked
-      // for a day this window does not cover".
-      if (date && !report.scope) {
-        return json(404, { error: `No processed logs for ${date} in the last ${days} days` });
-      }
-      return json(200, report);
-    }
-    // POST folds any newly delivered log objects into the stored daily report.
-    if (method === "POST") {
-      const ownHost = new URL((await loadConfigBundle()).site.baseUrl).hostname;
-      const result = await processLogs({
-        s3: store.s3, logBucket: store.LOG_BUCKET, store, ownHost,
-        force: query.get("force") === "1",
-      });
-      return json(200, result);
-    }
-  }
+  // A command: fold newly delivered log objects into the stored daily report.
+  processStats: async ({ query }) => {
+    await statsGuard();
+    const ownHost = new URL((await loadConfigBundle()).site.baseUrl).hostname;
+    const result = await processLogs({
+      s3: store.s3, logBucket: store.LOG_BUCKET, store, ownHost,
+      force: query.get("force") === "1",
+    });
+    return json(200, result);
+  },
 
   // ---- publish
-  if (head === "publish") {
-    if (method === "GET") return json(200, await store.computeChangeset());
-    if (method === "POST") {
-      await rebuild();
-      const changeset = await store.computeChangeset();
-      const logs = [];
-      const result = await store.publish(changeset, (m) => logs.push(m));
-      return json(200, { ...result, logs, by: actor.email });
-    }
+  previewPublish: async () => json(200, await store.computeChangeset()),
+
+  // A command: re-render, copy staging to live, invalidate.
+  publish: async ({ actor }) => {
+    await rebuild();
+    const changeset = await store.computeChangeset();
+    const logs = [];
+    const result = await store.publish(changeset, (m) => logs.push(m));
+    return json(200, { ...result, logs, by: actor.email });
+  },
+};
+
+// Contract and code must agree before the first request is served.
+{
+  const declared = new Set(operationIds(SPEC));
+  const missing = [...declared].filter((id) => !HANDLERS[id]);
+  const extra = Object.keys(HANDLERS).filter((id) => !declared.has(id));
+  if (missing.length || extra.length) {
+    throw new Error(`admin/openapi.json and server.mjs disagree. No handler for: ${missing.join(", ") || "-"}. No operation for: ${extra.join(", ") || "-"}.`);
+  }
+}
+
+async function routeApi({ method, segments, query, headers, body }) {
+  const route = matchRoute(ROUTES, method, segments);
+  const where = `/api/${segments.join("/")}`;
+  if (route.status === 400) return json(400, { error: `Malformed path ${where}` });
+  if (route.status === 404) return json(404, { error: `No route for ${where}` });
+  if (route.status === 405) {
+    return json(405, { error: `${method} is not allowed on ${where}. Allowed: ${route.allow.join(", ")}.` }, { allow: route.allow.join(", ") });
   }
 
-  return json(404, { error: `No route for ${method} /api/${segments.join("/")}` });
+  const actor = route.public ? null : await requireAdmin(headers);
+  const asJson = () => {
+    if (!body || !body.length) return {};
+    try {
+      return JSON.parse(body.toString("utf8"));
+    } catch {
+      throw new HttpError(400, "Request body is not valid JSON");
+    }
+  };
+  return HANDLERS[route.operationId]({ actor, params: route.params, query, headers, body, asJson });
 }
 
 // LOCAL DEVELOPMENT ONLY. In production the admin UI is static objects in S3
@@ -458,6 +560,11 @@ export async function handleRequest({ method, pathname, query, headers, body }) 
     }
     return { status: 404, headers: { "content-type": "text/plain" }, body: "not found" };
   } catch (err) {
+    // An HttpError was raised on purpose, with a message written for the
+    // caller -- including the 503 that says logging is off. Return it as is.
+    if (err instanceof HttpError) {
+      return json(err.status, { error: err.message, ...(err.details?.length > 1 ? { details: err.details } : {}) });
+    }
     const status = err instanceof AuthError ? err.status : 500;
     if (status >= 500) console.error(err);
     // 4xx messages are safe to return: they describe the caller's own request.

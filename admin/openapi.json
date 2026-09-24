@@ -1,0 +1,1571 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Scale-to-Zero Report admin API",
+    "version": "1.0.0",
+    "description": "The admin plane behind scale-to-zero.com/admin: articles, media, the admin list, access-log stats, and publishing from the staging bucket to the live one.\n\nThis document is the contract, not a description of it. admin/server.mjs routes requests from these paths and fails at cold start if an operation has no handler; request bodies are validated against these schemas by shared/schema.mjs; pipeline/build.mjs validates articles on disk against the same Article schema; and test/api.test.mjs fails if code and contract drift.\n\nMost of it is plain REST. Two operations are commands rather than resources, and say so: POST /publish and POST /stats.\n\nWrites to articles re-render the whole site into staging before responding, so they take a second or two. Nothing reaches the live site until POST /publish.\n\nRouter-level answers apply to every path and are not repeated on each operation: 404 for a path with no route, 405 (with an Allow header) for a method the path does not support, and 400 for a malformed path. Errors are always { \"error\": string }, with \"details\": string[] when validation found more than one problem.",
+    "license": {
+      "name": "Proprietary"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://scale-to-zero.com/api"
+    }
+  ],
+  "security": [
+    {
+      "session": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "session",
+      "description": "Signing in."
+    },
+    {
+      "name": "articles",
+      "description": "The publication's articles, drafts and published."
+    },
+    {
+      "name": "media",
+      "description": "Images and audio for articles."
+    },
+    {
+      "name": "admins",
+      "description": "Who may use the admin."
+    },
+    {
+      "name": "stats",
+      "description": "Traffic, from CloudFront access logs."
+    },
+    {
+      "name": "publish",
+      "description": "Promote staging to live."
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "tags": [
+          "session"
+        ],
+        "summary": "Liveness, and whether CloudFront's origin header arrived",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Up.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session": {
+      "post": {
+        "operationId": "createSession",
+        "tags": [
+          "session"
+        ],
+        "summary": "Exchange a Google ID token for a 12-hour session token",
+        "description": "The only operation that takes a Google ID token as the bearer credential. Every other operation takes the session token this returns.",
+        "security": [
+          {
+            "googleIdToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "operationId": "getMe",
+        "tags": [
+          "session"
+        ],
+        "summary": "Who the session belongs to",
+        "responses": {
+          "200": {
+            "description": "The signed-in admin.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/articles": {
+      "get": {
+        "operationId": "listArticles",
+        "tags": [
+          "articles"
+        ],
+        "summary": "Every article, newest first",
+        "responses": {
+          "200": {
+            "description": "Summaries; fetch one article for its body.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArticleSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createArticle",
+        "tags": [
+          "articles"
+        ],
+        "summary": "Create an article",
+        "description": "Only a headline is required. The slug defaults to <date>-<slugified headline>. Unspecified fields take editorial defaults.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created.",
+            "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Location": {
+                "description": "/api/articles/{slug}",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Article"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "An article with that slug already exists.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/articles/{slug}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/slug"
+        }
+      ],
+      "get": {
+        "operationId": "getArticle",
+        "tags": [
+          "articles"
+        ],
+        "summary": "One article, in full",
+        "responses": {
+          "200": {
+            "description": "The article. Send its ETag back as If-Match when you change it.",
+            "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Article"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "put": {
+        "operationId": "replaceArticle",
+        "tags": [
+          "articles"
+        ],
+        "summary": "Replace an article's editable fields",
+        "description": "A true replace: every editable field is required, and optional ones you leave out are removed. The slug, createdBy and createdAt are kept; updatedBy and updatedAt are set. To change some fields and keep the rest, use PATCH.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ifMatch"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleReplace"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Replaced.",
+            "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Article"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "412": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateArticle",
+        "tags": [
+          "articles"
+        ],
+        "summary": "Change some of an article's fields",
+        "description": "Merges the fields you send into the stored article; fields you leave out are kept. The slug cannot be changed: it names the published page.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ifMatch"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticlePatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated.",
+            "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Article"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "412": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteArticle",
+        "tags": [
+          "articles"
+        ],
+        "summary": "Delete an article and its rendered page from staging",
+        "description": "Removed from the live site at the next publish.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ifMatch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deleted"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "412": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/media": {
+      "post": {
+        "operationId": "uploadMedia",
+        "tags": [
+          "media"
+        ],
+        "summary": "Upload an image or an audio file",
+        "description": "The body is the raw file. Images are re-encoded to a 1400px WebP and a 480px thumbnail and the original is not kept. Audio is stored as uploaded.",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "image",
+                "audio"
+              ]
+            },
+            "description": "Defaults to image."
+          },
+          {
+            "name": "filename",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Original name; used for the stored key and, for audio, the type."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Stored in staging under media/.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/MediaImage"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MediaAudio"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "413": {
+            "description": "Larger than 25 MB.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admins": {
+      "get": {
+        "operationId": "getAdmins",
+        "tags": [
+          "admins"
+        ],
+        "summary": "The admin list",
+        "responses": {
+          "200": {
+            "description": "Everyone who may sign in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "put": {
+        "operationId": "replaceAdmins",
+        "tags": [
+          "admins"
+        ],
+        "summary": "Replace the admin list (owners only)",
+        "description": "Refused if it would leave no owner, or remove the caller's own ownership.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminListUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Replaced.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminListUpdated"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/stats": {
+      "get": {
+        "operationId": "getStats",
+        "tags": [
+          "stats"
+        ],
+        "summary": "The traffic summary for a window, or one day",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/days"
+          },
+          {
+            "$ref": "#/components/parameters/date"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The rolled-up report.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsReport"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/LoggingOff"
+          }
+        }
+      },
+      "post": {
+        "operationId": "processStats",
+        "tags": [
+          "stats"
+        ],
+        "summary": "Fold newly delivered access logs into the stored report (a command)",
+        "parameters": [
+          {
+            "name": "force",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            },
+            "description": "Reprocess every log object, not just new ones."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What was processed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsProcessed"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "503": {
+            "$ref": "#/components/responses/LoggingOff"
+          }
+        }
+      }
+    },
+    "/stats/detail": {
+      "get": {
+        "operationId": "getStatsDetail",
+        "tags": [
+          "stats"
+        ],
+        "summary": "Drill-down: geography, bots, acquisition, security",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/days"
+          },
+          {
+            "$ref": "#/components/parameters/date"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The detail report.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsReport"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/LoggingOff"
+          }
+        }
+      }
+    },
+    "/publish": {
+      "get": {
+        "operationId": "previewPublish",
+        "tags": [
+          "publish"
+        ],
+        "summary": "What a publish would copy and delete",
+        "responses": {
+          "200": {
+            "description": "The changeset, staging against live.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Changeset"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "operationId": "publish",
+        "tags": [
+          "publish"
+        ],
+        "summary": "Re-render, then copy staging to live and invalidate the CDN (a command)",
+        "responses": {
+          "200": {
+            "description": "Published.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "session": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "stz session token",
+        "description": "From POST /session. Valid 12 hours; the role is re-checked against the admin list on every request."
+      },
+      "googleIdToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "A Google ID token for an email on the admin list. Accepted only by POST /session."
+      }
+    },
+    "parameters": {
+      "slug": {
+        "name": "slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        }
+      },
+      "ifMatch": {
+        "name": "If-Match",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "description": "The ETag from the GET you edited. If the article has changed since, the write is refused with 412 instead of silently overwriting someone else's edit. \"*\" matches any existing article."
+      },
+      "days": {
+        "name": "days",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "description": "Window in days; default 30, capped at 365."
+      },
+      "date": {
+        "name": "date",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "description": "Scope to one day."
+      }
+    },
+    "headers": {
+      "ETag": {
+        "description": "A strong validator for the article's current content.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "responses": {
+      "Invalid": {
+        "description": "The request is malformed. `details` lists every problem.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Missing, expired, or unverifiable credential.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Signed in, but not allowed to do this.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "No such thing.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "If-Match did not match: the article changed since it was read.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "LoggingOff": {
+        "description": "Access logging is not enabled.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Every validation problem, when there is more than one thing to say."
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "required": [
+          "ok",
+          "origin",
+          "enforcing"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "clientId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The Google OAuth client id the admin signs in with."
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "match",
+              "mismatch",
+              "missing",
+              "unconfigured"
+            ],
+            "description": "Whether CloudFront's shared origin header arrived. Reveals that the check exists, not the secret."
+          },
+          "enforcing": {
+            "type": "boolean",
+            "description": "Whether requests without the origin header are refused."
+          }
+        }
+      },
+      "Me": {
+        "type": "object",
+        "required": [
+          "email",
+          "role"
+        ],
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "Session": {
+        "type": "object",
+        "required": [
+          "sessionToken",
+          "expiresAt",
+          "email",
+          "role"
+        ],
+        "properties": {
+          "sessionToken": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "integer",
+            "description": "Unix epoch milliseconds."
+          },
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "owner",
+          "editor"
+        ]
+      },
+      "Slug": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+        "description": "Identity of an article and the name of its page: /<slug>.html."
+      },
+      "Date": {
+        "type": "string",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+      },
+      "Timestamp": {
+        "type": "string",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+      },
+      "Status": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "published"
+        ],
+        "description": "Drafts are stored but never rendered."
+      },
+      "TemplateType": {
+        "type": "string",
+        "enum": [
+          "article",
+          "podcast"
+        ]
+      },
+      "Category": {
+        "type": "string",
+        "pattern": "^[A-Z][A-Z_]*$",
+        "description": "A key of pipeline/taxonomy.json categories, e.g. BILL_SHOCK."
+      },
+      "Source": {
+        "type": "object",
+        "description": "The news item the article responds to.",
+        "required": [
+          "title",
+          "url",
+          "publisher"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "publisher": {
+            "type": "string"
+          },
+          "figure": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The headline number, e.g. \"174 minutes\"."
+          },
+          "discussionUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Where practitioners discussed it, e.g. a Hacker News thread."
+          },
+          "excerpt": {
+            "type": "string"
+          },
+          "publishedAt": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z)?$",
+            "description": "When the source was published: a date, or a full UTC timestamp when the outlet gives one."
+          }
+        }
+      },
+      "Audio": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "description": "The episode for a podcast-template article, or null for a text article.",
+        "required": [
+          "url",
+          "mimeType"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "byteLength": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "durationSeconds": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          }
+        }
+      },
+      "Sections": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "description": "Legacy fixed-section bodies from the pipeline's claim skeleton, keyed by section (whatHappened, theArchitectureUnderneath, ...). Articles written in the admin use body instead and set this to null.",
+        "additionalProperties": {
+          "type": "string"
+        }
+      },
+      "Article": {
+        "type": "object",
+        "description": "An article as stored. Also the schema pipeline/build.mjs checks articles/*.json against.",
+        "required": [
+          "slug",
+          "date",
+          "status",
+          "headline",
+          "category"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "slug": {
+            "$ref": "#/components/schemas/Slug"
+          },
+          "headline": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dek": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "templateType": {
+            "$ref": "#/components/schemas/TemplateType"
+          },
+          "date": {
+            "$ref": "#/components/schemas/Date"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category"
+          },
+          "categoryLabel": {
+            "type": "string"
+          },
+          "flatStackAngle": {
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "body": {
+            "type": "string"
+          },
+          "sections": {
+            "$ref": "#/components/schemas/Sections"
+          },
+          "pullQuote": {
+            "type": "string"
+          },
+          "audio": {
+            "$ref": "#/components/schemas/Audio"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "_brief": {
+            "type": "object"
+          },
+          "_sources": {
+            "type": "object"
+          },
+          "createdBy": {
+            "type": "string",
+            "readOnly": true
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "updatedBy": {
+            "type": "string",
+            "readOnly": true
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "ArticleCreate": {
+        "type": "object",
+        "description": "Only headline is required. slug is optional and fixed once created.",
+        "required": [
+          "headline"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "slug": {
+            "$ref": "#/components/schemas/Slug"
+          },
+          "headline": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dek": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "templateType": {
+            "$ref": "#/components/schemas/TemplateType"
+          },
+          "date": {
+            "$ref": "#/components/schemas/Date"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category"
+          },
+          "categoryLabel": {
+            "type": "string"
+          },
+          "flatStackAngle": {
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "body": {
+            "type": "string"
+          },
+          "sections": {
+            "$ref": "#/components/schemas/Sections"
+          },
+          "pullQuote": {
+            "type": "string"
+          },
+          "audio": {
+            "$ref": "#/components/schemas/Audio"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "_brief": {
+            "type": "object"
+          },
+          "_sources": {
+            "type": "object"
+          }
+        }
+      },
+      "ArticleReplace": {
+        "type": "object",
+        "description": "Every editable field. sections, _brief and _sources are optional and removed when left out.",
+        "required": [
+          "headline",
+          "dek",
+          "status",
+          "templateType",
+          "date",
+          "category",
+          "categoryLabel",
+          "flatStackAngle",
+          "source",
+          "body",
+          "pullQuote",
+          "audio",
+          "tags"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "headline": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dek": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "templateType": {
+            "$ref": "#/components/schemas/TemplateType"
+          },
+          "date": {
+            "$ref": "#/components/schemas/Date"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category"
+          },
+          "categoryLabel": {
+            "type": "string"
+          },
+          "flatStackAngle": {
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "body": {
+            "type": "string"
+          },
+          "sections": {
+            "$ref": "#/components/schemas/Sections"
+          },
+          "pullQuote": {
+            "type": "string"
+          },
+          "audio": {
+            "$ref": "#/components/schemas/Audio"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "_brief": {
+            "type": "object"
+          },
+          "_sources": {
+            "type": "object"
+          }
+        }
+      },
+      "ArticlePatch": {
+        "type": "object",
+        "description": "Any editable fields; the rest are kept. The slug cannot be changed.",
+        "minProperties": 1,
+        "additionalProperties": false,
+        "properties": {
+          "headline": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dek": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "templateType": {
+            "$ref": "#/components/schemas/TemplateType"
+          },
+          "date": {
+            "$ref": "#/components/schemas/Date"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category"
+          },
+          "categoryLabel": {
+            "type": "string"
+          },
+          "flatStackAngle": {
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "body": {
+            "type": "string"
+          },
+          "sections": {
+            "$ref": "#/components/schemas/Sections"
+          },
+          "pullQuote": {
+            "type": "string"
+          },
+          "audio": {
+            "$ref": "#/components/schemas/Audio"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "_brief": {
+            "type": "object"
+          },
+          "_sources": {
+            "type": "object"
+          }
+        }
+      },
+      "ArticleSummary": {
+        "type": "object",
+        "required": [
+          "slug",
+          "date",
+          "headline",
+          "status"
+        ],
+        "properties": {
+          "slug": {
+            "$ref": "#/components/schemas/Slug"
+          },
+          "date": {
+            "$ref": "#/components/schemas/Date"
+          },
+          "headline": {
+            "type": "string"
+          },
+          "dek": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "templateType": {
+            "$ref": "#/components/schemas/TemplateType"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category"
+          },
+          "categoryLabel": {
+            "type": "string"
+          }
+        }
+      },
+      "Deleted": {
+        "type": "object",
+        "required": [
+          "deleted"
+        ],
+        "properties": {
+          "deleted": {
+            "$ref": "#/components/schemas/Slug"
+          }
+        }
+      },
+      "MediaImage": {
+        "type": "object",
+        "required": [
+          "url",
+          "thumbnail",
+          "bytes"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Site-relative path of the 1400px WebP."
+          },
+          "thumbnail": {
+            "type": "string",
+            "description": "Site-relative path of the 480px WebP."
+          },
+          "width": {
+            "type": "integer",
+            "description": "Of the original."
+          },
+          "height": {
+            "type": "integer",
+            "description": "Of the original."
+          },
+          "bytes": {
+            "type": "integer"
+          }
+        }
+      },
+      "MediaAudio": {
+        "type": "object",
+        "required": [
+          "url",
+          "mimeType",
+          "byteLength"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "byteLength": {
+            "type": "integer"
+          }
+        }
+      },
+      "Admin": {
+        "type": "object",
+        "required": [
+          "email",
+          "role"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Lower-cased on save."
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "added": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "AdminList": {
+        "type": "object",
+        "required": [
+          "admins",
+          "roles",
+          "you"
+        ],
+        "properties": {
+          "admins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Admin"
+            }
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Role"
+            }
+          },
+          "you": {
+            "type": "string"
+          }
+        }
+      },
+      "AdminListUpdate": {
+        "type": "object",
+        "required": [
+          "admins"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "admins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Admin"
+            }
+          }
+        }
+      },
+      "AdminListUpdated": {
+        "type": "object",
+        "required": [
+          "admins"
+        ],
+        "properties": {
+          "admins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Admin"
+            }
+          }
+        }
+      },
+      "Changeset": {
+        "type": "object",
+        "required": [
+          "upload",
+          "delete"
+        ],
+        "properties": {
+          "upload": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Keys that differ from live, by ETag."
+          },
+          "delete": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Live keys staging no longer has."
+          }
+        }
+      },
+      "PublishResult": {
+        "type": "object",
+        "required": [
+          "copied",
+          "removed",
+          "logs",
+          "by"
+        ],
+        "properties": {
+          "copied": {
+            "type": "integer"
+          },
+          "removed": {
+            "type": "integer"
+          },
+          "invalidation": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "CloudFront invalidation id, if anything changed."
+          },
+          "logs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "by": {
+            "type": "string"
+          }
+        }
+      },
+      "StatsReport": {
+        "type": "object",
+        "description": "Traffic reports built from CloudFront access logs by admin/lib/stats.mjs. Their shape follows the admin's stats tabs and is documented there, not frozen here.",
+        "additionalProperties": true
+      },
+      "StatsProcessed": {
+        "type": "object",
+        "description": "What processLogs folded in (admin/lib/stats.mjs).",
+        "additionalProperties": true
+      }
+    }
+  }
+}

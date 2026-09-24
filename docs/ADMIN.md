@@ -127,6 +127,32 @@ in `articles/` so the admin has something to show. It will not overwrite an
 existing `admins.json` unless you pass `--force` — otherwise re-running it would
 silently demote everyone added through the UI.
 
+## The API contract
+
+`admin/openapi.json` (OpenAPI 3.1) is the API, not a description of it:
+
+- **Routing comes from it.** `admin/lib/routes.mjs` matches requests against its
+  `paths`; each `operationId` names one handler in `server.mjs`. An operation
+  without a handler, or a handler without an operation, stops the Lambda from
+  loading. A path that exists answers a wrong method with 405 and `Allow`.
+- **Validation comes from it.** Request bodies are checked against its schemas
+  by `shared/schema.mjs` (a small validator, no dependency); a bad request gets
+  400 with every problem in `details`. `pipeline/build.mjs` checks
+  `articles/*.json` against the same `Article` schema.
+- **Tests hold it to its word.** `test/api.test.mjs` runs the real server with
+  the S3 store and sharp stubbed, and checks every response against the schema
+  the spec declares for it.
+
+Articles are plain REST. `PATCH /api/articles/{slug}` merges (the editor uses
+this); `PUT` replaces every editable field and refuses a partial body rather
+than dropping what was left out. Reads return an `ETag`; send it back as
+`If-Match` and a save over someone else's newer edit gets 412 instead of
+silently replacing it. `POST /api/publish` and `POST /api/stats` are commands,
+and the spec says so.
+
+When adding a route: add it to `openapi.json` first, then the handler. The
+server will not start until both exist.
+
 ## Publishing
 
 `GET /api/publish` returns the changeset; `POST /api/publish` performs it.

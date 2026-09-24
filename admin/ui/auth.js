@@ -173,7 +173,18 @@ export function signOut() {
  * replays the request, so an aged-out session costs a moment rather than the
  * work in progress.
  */
-export async function api(path, opts = {}, retry = true) {
+/**
+ * Like api(), but also returns the response's ETag, for reads the caller will
+ * write back: send it as If-Match and the server refuses the save (412) if
+ * someone else changed the article in the meantime.
+ */
+export async function apiWithEtag(path, opts = {}) {
+  let etag = null;
+  const data = await api(path, opts, true, (res) => { etag = res.headers.get("etag"); });
+  return { data, etag };
+}
+
+export async function api(path, opts = {}, retry = true, onResponse = null) {
   if (!session) throw new AuthError("Not signed in.");
 
   const send = () => {
@@ -196,9 +207,14 @@ export async function api(path, opts = {}, retry = true) {
     }
   }
 
+  onResponse?.(res);
   const text = await res.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
-  if (!res.ok) throw new AuthError(data?.error ?? `HTTP ${res.status}`);
+  if (!res.ok) {
+    // Validation lists every problem in `details`; show them all, not a count.
+    const msg = data?.details?.length ? `${data.error}: ${data.details.join("; ")}` : data?.error;
+    throw new AuthError(msg ?? `HTTP ${res.status}`);
+  }
   return data;
 }

@@ -62,21 +62,26 @@ await cp(path.join(ROOT, "admin", "package.json"), path.join(BUILD, "package.jso
 for (const f of (await readdir(path.join(ROOT, "admin", "lib"))).filter((f) => f.endsWith(".mjs"))) {
   await cp(path.join(ROOT, "admin", "lib", f), path.join(BUILD, "lib", f));
 }
-await cp(path.join(ROOT, "shared", "render.mjs"), path.join(BUILD, "shared", "render.mjs"));
-log("server.mjs, package.json, lib/*.mjs, shared/render.mjs (no ui/)");
+// The API contract: server.mjs routes from it and validates against it.
+await cp(path.join(ROOT, "admin", "openapi.json"), path.join(BUILD, "openapi.json"));
+const SHARED = ["render.mjs", "schema.mjs"];
+for (const f of SHARED) await cp(path.join(ROOT, "shared", f), path.join(BUILD, "shared", f));
+log(`server.mjs, openapi.json, package.json, lib/*.mjs, shared/{${SHARED.join(",")}} (no ui/)`);
 
-// server.mjs imports ../shared/render.mjs, which does not survive zipping: the
+// server.mjs imports ../shared/*.mjs, which does not survive zipping: the
 // zip root is BUILD and Lambda extracts to /var/task, so shared/ has to sit
-// inside and the import has to be rewritten to match.
-step(3, "Rewrite the shared import");
+// inside and the imports have to be rewritten to match.
+step(3, "Rewrite the shared imports");
 const serverPath = path.join(BUILD, "server.mjs");
-const rewritten = (await readFile(serverPath, "utf8"))
-  .replace(/from "\.\.\/shared\/render\.mjs"/, 'from "./shared/render.mjs"');
-await writeFile(serverPath, rewritten);
-if (!rewritten.includes('./shared/render.mjs')) {
-  throw new Error("shared import rewrite failed -- the Lambda would crash on cold start.");
+let rewritten = await readFile(serverPath, "utf8");
+for (const f of SHARED) {
+  rewritten = rewritten.replace(`from "../shared/${f}"`, `from "./shared/${f}"`);
+  if (!rewritten.includes(`from "./shared/${f}"`)) {
+    throw new Error(`shared import rewrite failed for ${f} -- the Lambda would crash on cold start.`);
+  }
+  log(`../shared/${f} -> ./shared/${f}`);
 }
-log("../shared/render.mjs -> ./shared/render.mjs");
+await writeFile(serverPath, rewritten);
 
 step(4, "Production install with the LINUX x64 sharp binary");
 if (haveModules) {
