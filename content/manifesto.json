@@ -1,10 +1,8 @@
 {
   "_doc": "The publication's edition of the airbrx flat-stack doctrine. Localized: same argument and the same ten principles, reframed for a daily column instead of a product page. Edit here, not in build.mjs.",
-
   "title": "The Flat Stack",
   "standfirst": "Use as close to nothing as possible. Almost no running computers, almost no moving parts. Less to pay for, less to break, less to defend.",
   "dek": "This is the argument every article on this site is measured against. It is the reader's edition of the engineering doctrine airbrx builds by.",
-
   "sections": [
     {
       "heading": "How we got here",
@@ -24,10 +22,8 @@
       "body": "A flat stack is not an aesthetic. It is the only architecture we have found that delivers four things at the same time, without asking anyone to change a single workflow:\n\n**Costs go down.** A stack with almost nothing running has almost nothing to bill. You do not optimize the warehouse; you keep it asleep.\n\n**Data gets faster.** The fastest query is the one that never has to wake the warehouse at all. Served from a predictable key, the answer is already there.\n\n**Control gets precise.** A system built on reproducible keys is a system you can reason about, govern, and audit. Predictability is not just cheap, it is controllable.\n\n**It stays secure.** Every dependency you do not take on is an attack surface you do not have to defend. The smallest stack is also the safest one.\n\nThe enterprise stack made all four a tradeoff: pick two, pay for the rest. A flat stack makes them the same decision.\n\nWhen an article here asks *what would this have cost with almost no running computers*, these four are the scoreboard."
     }
   ],
-
   "principlesHeading": "The Southern Cross",
   "principlesKicker": "How it gets built. Ten rules, and the reason each article's rebuttal writes itself.",
-
   "principles": [
     {
       "name": "Do not wake the Beast.",
@@ -70,11 +66,9 @@
       "body": "And go scale something down to zero."
     }
   ],
-
   "closing": {
     "heading": "How this becomes a daily column",
     "body": "The doctrine above is the answer. This site exists to keep finding the questions.\n\nEvery morning a pipeline reads Hacker News, Google News, and a set of publisher feeds looking for one specific kind of event: something that went badly because of what it cost to run, or how much of it there was to run. Candidates have to clear two gates. They must be about computing infrastructure, and they must match one of eight story types. A large dollar figure or a busy comment thread is not enough on its own; those are boosters, not qualifiers. Everything that survives is read by a person before anything is written.\n\nThen the story gets rebuilt against the ten rules above, and the article says what the flat-stack version would have cost and what it would have given up. There is always something given up. An argument that pretends otherwise is marketing.\n\nWe do not publish anything that is not already public and linked. We name vendors, because a story about a bill is not a story without the name on the invoice, but the criticism is aimed at the architecture, and you get the original link to check our reading against."
   },
-
-  "attribution": "This is the reader's edition of the engineering doctrine airbrx builds by. The original is [The Flat-Stack Manifesto](https://airbrx.ai/articles/flat-stack-manifesto.html); the argument for why a fifteen-year-old architecture is the current one is [here](https://www.michaelbissell.com/18b7345a-4272-4be0-81f0-c0cb3c5ad61d/Why-Am-I-Promoting-A-15-Year-Old-Architecture-Solution/)."
+  "attribution": "This is the reader's edition of the engineering doctrine airbrx builds by, and The Scale-to-Zero Report is a community project of [airbrx](https://airbrx.ai/about.html). The original is [The Flat-Stack Manifesto](https://airbrx.ai/articles/flat-stack-manifesto.html); what it looks like shipped as a product is [The Gateway Flat-Stack Built](https://airbrx.ai/articles/gateway-flat-stack-built.html). Disagree with a principle, or have a case that tests one? [Bring it on GitHub](https://github.com/airbrx/scale-to-zero)."
 }

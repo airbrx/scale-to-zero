@@ -8,6 +8,27 @@
 export const esc = (s = "") =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
+/**
+ * Who publishes this, and where readers go next. Kept here, not in
+ * config.json: both renderers -- pipeline/build.mjs and the admin Lambda --
+ * load this file, so a link change ships with the code and cannot drift
+ * between the local config and the admin's copy in staging.
+ */
+export const AIRBRX = {
+  org: "airbrx",
+  url: "https://airbrx.ai",
+  logo: "https://airbrx.ai/lib/logo.png",
+  author: "The airbrx community",
+  about: "https://airbrx.ai/about.html",
+  manifesto: "https://airbrx.ai/articles/flat-stack-manifesto.html",
+  flatStack: "https://airbrx.ai/flat-stack.html",
+  cache: "https://airbrx.ai/articles/",
+  scan: "https://airbrx.ai/scan.html",
+  howItWorks: "https://airbrx.ai/how-it-works.html",
+  gatewayBuilt: "https://airbrx.ai/articles/gateway-flat-stack-built.html",
+  repo: "https://github.com/airbrx/scale-to-zero",
+};
+
 // Body copy is plain text with blank-line paragraph breaks.
 // Supports **bold**, *italic*, `code`, [text](url).
 export function para(text = "") {
@@ -68,24 +89,56 @@ ${extra}
     <span class="wordmark-the">The</span> Scale-to-Zero <span class="wordmark-report">Report</span>
   </a>
   <p class="masthead-tag">${esc(site.tagline)}</p>
+  <p class="masthead-community">A community project of <a href="${esc(AIRBRX.url)}" rel="noopener">airbrx</a></p>
   <nav class="masthead-nav">
     <a href="/">Archive</a>
     <a href="/flat-stack.html">Flat Stack</a>
     <a href="/scorecard.html">Scorecard</a>
+    <a href="${esc(AIRBRX.repo)}" rel="noopener">Contribute</a>
     <a href="/feed.xml">RSS</a>
-    <a href="${esc(site.orgUrl)}" rel="noopener">airbrx</a>
+    <a href="${esc(AIRBRX.url)}" rel="noopener">airbrx</a>
   </nav>
 </header>`;
 }
 
+/**
+ * Who publishes this and where to go next. Chrome, not argument: it sits
+ * after the article, so a piece is never a vendor pitch (docs/EDITORIAL.md),
+ * but every reader who finishes one is a click from airbrx and from the repo.
+ */
+export function communityCard(site) {
+  const a = AIRBRX;
+  return `  <aside class="community">
+    <p class="community-label">About this publication</p>
+    <p class="community-body">The Scale-to-Zero Report is a community project of <a href="${esc(AIRBRX.url)}" rel="noopener">airbrx</a>.
+    Every piece is measured against <a href="${esc(AIRBRX.manifesto)}" rel="noopener">the flat-stack manifesto</a>;
+    <a href="${esc(a.gatewayBuilt)}" rel="noopener">the airbrx gateway</a> is that doctrine shipped as a product.</p>
+    <ul class="community-links">
+      <li><a href="${esc(a.scan)}" rel="noopener">Scan your own query history</a></li>
+      <li><a href="/scorecard.html">Score a repository against the flat stack</a></li>
+      <li><a href="${esc(AIRBRX.repo)}" rel="noopener">Send a story or a fix on GitHub</a></li>
+      <li><a href="${esc(a.cache)}" rel="noopener">More from The Cache at airbrx</a></li>
+    </ul>
+  </aside>`;
+}
+
 export function foot(site) {
+  const a = AIRBRX;
   return `
 <footer class="footer">
   <p class="footer-thesis">Every article here answers one question: <em>what would this have cost with almost no running computers?</em></p>
   <p class="footer-meta">
-    ${esc(site.name)} &middot; by <a href="${esc(site.authorUrl)}" rel="noopener">${esc(site.author)}</a> &middot;
-    published from <a href="${esc(site.manifestoUrl)}" rel="noopener">the flat-stack manifesto</a>
+    ${esc(site.name)} is a community project of <a href="${esc(AIRBRX.url)}" rel="noopener">airbrx</a>,
+    written from <a href="${esc(AIRBRX.manifesto)}" rel="noopener">the flat-stack manifesto</a>.
+    Stories, fixes, and scorecard checks are welcome <a href="${esc(AIRBRX.repo)}" rel="noopener">on GitHub</a>.
   </p>
+  <nav class="footer-links" aria-label="From airbrx">
+    <a href="${esc(a.flatStack)}" rel="noopener">Flat-stack</a>
+    <a href="${esc(a.cache)}" rel="noopener"><span class="fl-more">The </span>Cache</a>
+    <a href="${esc(a.howItWorks)}" rel="noopener"><span class="fl-more">The </span>gateway</a>
+    <a href="${esc(a.scan)}" rel="noopener">Scan<span class="fl-more"> your queries</span></a>
+    <a href="${esc(a.about)}" rel="noopener">About<span class="fl-more"> airbrx</span></a>
+  </nav>
   <p class="footer-meta footer-dogfood">
     This site runs on the architecture it advocates: static files on object storage behind a CDN.
     No server, no database, no runtime. It costs the same whether one person reads it or a million do.
@@ -153,8 +206,12 @@ export function articleHtml(site, tax, a) {
     headline: a.headline,
     description: a.dek,
     datePublished: a.date,
-    author: { "@type": "Person", name: site.author, url: site.authorUrl },
-    publisher: { "@type": "Organization", name: site.name },
+    // Written by the community, published by airbrx: organizations, not a person.
+    author: { "@type": "Organization", name: AIRBRX.author, url: AIRBRX.about },
+    publisher: {
+      "@type": "Organization", name: AIRBRX.org, url: AIRBRX.url,
+      logo: { "@type": "ImageObject", url: AIRBRX.logo },
+    },
     mainEntityOfPage: canonical,
     ...(a.audio?.url ? { associatedMedia: { "@type": "MediaObject", contentUrl: a.audio.url } } : {}),
   };
@@ -191,6 +248,8 @@ ${a.pullQuote ? `  <blockquote class="pull">${esc(a.pullQuote)}</blockquote>` : 
     <p class="rebuttal-label">The principle</p>
     <p class="rebuttal-body">${esc(tax.flatStackAngles?.[a.flatStackAngle] ?? "")}</p>
   </aside>
+
+${communityCard(site)}
 </article>
 </main>
 ${foot(site)}`;
@@ -215,6 +274,7 @@ ${a.templateType === "podcast" ? `        <span class="tag tag-audio">Audio</spa
   <section class="lede">
     <h1>${esc(site.description)}</h1>
     <p>Somebody is always paying for compute they did not need. We find the receipts in the day's news, then rebuild the thing flat: open formats, precomputed answers, static delivery, and no server standing around waiting to be billed for.</p>
+    <p class="lede-community">A community project of <a href="${esc(AIRBRX.url)}" rel="noopener">airbrx</a>, measured against <a href="${esc(AIRBRX.manifesto)}" rel="noopener">the flat-stack manifesto</a>. Know a story that belongs here? <a href="${esc(AIRBRX.repo)}" rel="noopener">Send it on GitHub</a>.</p>
   </section>
   ${articles.length ? `<ul class="cards">\n${cards}\n  </ul>` :
     `<p class="empty">No articles published yet. Run the pipeline, claim a story, publish.</p>`}
@@ -317,6 +377,11 @@ It pattern-matches. It does not execute. The secret scan finds the shapes of wel
 
 The grade is a conversation starter, not an audit. Each principle is weighted equally, and each verdict links to the lines behind it, so when a grade looks wrong you can see exactly which rule made it.`)}
   </section>
+
+  <section class="section">
+    <h2>Whose rules these are</h2>
+    <p>The nine principles are airbrx's <a href="${esc(AIRBRX.manifesto)}" rel="noopener">flat-stack manifesto</a>, the doctrine behind <a href="${esc(AIRBRX.gatewayBuilt)}" rel="noopener">the airbrx gateway</a>. The scorecard is a community project: a check that misjudged your repo, or a language it does not read yet, is <a href="${esc(AIRBRX.repo)}" rel="noopener">an issue or a pull request away</a>. If the grade points at a warehouse bill, <a href="${esc(AIRBRX.scan)}" rel="noopener">scan your query history</a> to see what the repetition costs.</p>
+  </section>
 </main>
 ${foot(site)}`;
 }
@@ -338,6 +403,7 @@ export function feedXml(site, articles) {
   <link>${esc(site.baseUrl)}</link>
   <description>${esc(site.description)}</description>
   <language>en-us</language>
+  <copyright>A community project of ${esc(AIRBRX.org)} (${esc(AIRBRX.url)})</copyright>
 ${items}
 </channel></rss>`;
 }
@@ -370,7 +436,8 @@ export function podcastXml(site, articles) {
   <link>${esc(site.baseUrl)}</link>
   <description>${esc(site.description)}</description>
   <language>en-us</language>
-  <itunes:author>${esc(site.author)}</itunes:author>
+  <copyright>A community project of ${esc(AIRBRX.org)} (${esc(AIRBRX.url)})</copyright>
+  <itunes:author>${esc(AIRBRX.author)}</itunes:author>
   <itunes:summary>${esc(site.description)}</itunes:summary>
   <itunes:explicit>false</itunes:explicit>
   <itunes:category text="Technology"/>
@@ -406,7 +473,17 @@ ${foot(site)}`;
 }
 
 /** Everything the site needs, from one article list. Used by both renderers. */
+// The per-site values the pages cannot render without. (The airbrx links are
+// the AIRBRX constant above, so they cannot be missing.)
+const REQUIRED_SITE = ["name", "shortName", "tagline", "description", "baseUrl"];
+
+function assertSiteConfig(site) {
+  const missing = REQUIRED_SITE.filter((k) => !site?.[k]);
+  if (missing.length) throw new Error(`site config is missing ${missing.join(", ")} (config.json, and _internal/config.json in staging for the admin)`);
+}
+
 export function renderSite({ site, tax, manifesto, articles }) {
+  assertSiteConfig(site);
   const sorted = [...articles].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   const files = {};
 

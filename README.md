@@ -3,6 +3,23 @@
 A daily publication that finds real news about compute costing somebody something —
 a bill, a project, a breach, a shut-down — and rebuilds the story flat.
 
+**A community project of [airbrx](https://airbrx.ai).** Live at
+[scale-to-zero.com](https://scale-to-zero.com). Every piece is measured against
+[the flat-stack manifesto](https://airbrx.ai/articles/flat-stack-manifesto.html),
+the doctrine behind [the airbrx gateway](https://airbrx.ai/articles/gateway-flat-stack-built.html).
+More writing from airbrx lives in [The Cache](https://airbrx.ai/articles/).
+
+## Contributing
+
+- **A story.** Open an issue with the link and the one number that makes it hurt.
+  The bar is in `docs/EDITORIAL.md`: real wreckage, a named architecture, an honest
+  account of what the flat version gives up.
+- **A scorecard fix.** If [the scorecard](https://scale-to-zero.com/scorecard.html)
+  misjudged a repo, open an issue with the repo URL and the check that got it
+  wrong. New language packs are one file each; see `docs/SCORECARD.md`.
+- **Code.** Every test must pass: `for f in test/*.test.mjs; do node $f; done`. No new dependencies without a reason
+  written down next to them -- the manifesto applies to this repo too.
+
 Two halves:
 
 1. **A research pipeline** that scans news and social sources for wreckage caused by

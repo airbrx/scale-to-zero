@@ -76,7 +76,9 @@ if (await exists("admins.json") && !force) {
   console.log("  skip admins.json (already exists -- pass --force to replace)");
 } else {
   await put("admins.json", {
-    admins: [{ email: owner.toLowerCase(), role: "owner", name: config.site.author, added: new Date().toISOString() }],
+    // The byline is the community's, not a person's, so the first owner gets
+    // no display name here; they set their own in the admin.
+    admins: [{ email: owner.toLowerCase(), role: "owner", name: null, added: new Date().toISOString() }],
     seededAt: new Date().toISOString(),
   });
 }

@@ -36,7 +36,7 @@ const EDITOR = "editor@example.test";
 function seed() {
   mem.__reset({
     "admins.json": { admins: [{ email: OWNER, role: "owner", name: "Owner" }, { email: EDITOR, role: "editor", name: "Ed" }] },
-    "_internal/config.json": { site: { name: "Test Report", shortName: "Test", tagline: "t", description: "d", baseUrl: "https://example.test", author: "A", authorUrl: "https://a.test", manifestoUrl: "https://m.test", orgUrl: "https://o.test", locale: "en-US" } },
+    "_internal/config.json": { site: { name: "Test Report", shortName: "Test", tagline: "t", description: "d", baseUrl: "https://example.test", author: "A", authorUrl: "https://a.test", manifestoUrl: "https://m.test", orgUrl: "https://o.test", org: "o", locale: "en-US", orgLogo: "https://o.test/logo.png", repoUrl: "https://g.test/repo", airbrx: { about: "https://o.test/about", flatStack: "https://o.test/fs", cache: "https://o.test/cache", scan: "https://o.test/scan", howItWorks: "https://o.test/how", gatewayBuilt: "https://o.test/built" } } },
     "_internal/articles/index.json": [],
     "assets/style.css": "body{}",
   });

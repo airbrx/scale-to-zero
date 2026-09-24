@@ -257,6 +257,56 @@ a { color: inherit; }
 .footer-meta a { color: var(--ink-soft); }
 .footer-dogfood { opacity: .8; }
 
+/* ------------------------------------------------------------ community
+   The publication is a community project of airbrx; these carry that, and
+   the way to airbrx, on every page -- in the chrome, never in the argument. */
+.masthead-community {
+  margin: .35rem 0 0; font-family: var(--serif); font-style: italic;
+  font-size: .9rem; color: var(--ink-soft);
+}
+.masthead-community a { color: var(--accent-2); text-underline-offset: 2px; }
+.lede .lede-community { margin-top: .9rem; font-size: .92rem; }
+.lede-community a, .footer-meta a { text-underline-offset: 2px; }
+.lede-community a { color: var(--accent-2); }
+
+/* One compact strip, set off from the sentence above by hairlines, with a
+   hairline between each link. On a phone the labels drop their extra words
+   ("The Cache" -> "Cache") so the strip still fits on one line. */
+.footer-links {
+  display: inline-flex; flex-wrap: wrap; justify-content: center;
+  margin: 1rem auto 1.1rem;
+  border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+  font-family: var(--mono); font-size: .64rem; text-transform: uppercase; letter-spacing: .07em;
+}
+.footer-links a {
+  padding: .45rem .75rem; line-height: 1.2; white-space: nowrap;
+  color: var(--ink-soft); text-decoration: none;
+}
+.footer-links a + a { border-left: 1px solid var(--rule); }
+.footer-links a:hover, .footer-links a:focus-visible { color: var(--accent-2); }
+.footer-links a:focus-visible { outline: 2px solid var(--accent-2); outline-offset: -2px; }
+@media (max-width: 560px) {
+  .footer-links .fl-more { display: none; }
+  .footer-links a { padding: .45rem .6rem; }
+}
+
+.community {
+  margin: 1.4rem 0 1rem; padding: 1.1rem 1.3rem;
+  background: var(--card); border: 1px solid var(--rule); border-top: 3px solid var(--accent-2); border-radius: 3px;
+}
+.community-label {
+  margin: 0 0 .4rem; font-family: var(--mono); font-size: .64rem;
+  text-transform: uppercase; letter-spacing: .12em; color: var(--ink-faint);
+}
+.community-body { margin: 0 0 .7rem; font-size: .95rem; color: var(--ink-soft); max-width: var(--measure); }
+.community-body a, .community-links a { color: var(--accent-2); text-underline-offset: 2px; }
+.community-links {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: .3rem 1.2rem;
+  font-size: .88rem;
+}
+.community-links li::before { content: "\2192\00a0"; color: var(--ink-faint); }
+
 @media (max-width: 560px) {
   body { font-size: 16px; }
   .wrap { padding: 1.8rem 1.1rem 1rem; }

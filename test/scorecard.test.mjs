@@ -358,7 +358,7 @@ t("middling: warn phrasing used", narrate(middling).byPrinciple.dependency.inclu
 
 // ------------------------------------------------------------------ render
 const { files } = renderSite({
-  site: { name: "N", shortName: "S", tagline: "T", description: "D", baseUrl: "https://x", author: "A", authorUrl: "https://a", manifestoUrl: "https://m", orgUrl: "https://o", locale: "en-US" },
+  site: { name: "N", shortName: "S", tagline: "T", description: "D", baseUrl: "https://x", author: "A", authorUrl: "https://a", manifestoUrl: "https://m", orgUrl: "https://o", org: "o", locale: "en-US", orgLogo: "https://o.test/logo.png", repoUrl: "https://g.test/repo", airbrx: { about: "https://o.test/about", flatStack: "https://o.test/fs", cache: "https://o.test/cache", scan: "https://o.test/scan", howItWorks: "https://o.test/how", gatewayBuilt: "https://o.test/built" } },
   tax: { categories: {}, flatStackAngles: {} }, manifesto, articles: [],
 });
 t("scorecard page rendered", typeof files["scorecard.html"], "string");
