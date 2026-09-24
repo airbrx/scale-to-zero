@@ -64,7 +64,9 @@ export const PHRASES = {
     fix: ["Keep an export of what lives in {vendors} in open files you control."],
   },
   "common.secrets": {
-    pass: ["keeps credential-shaped strings out of the files scanned", "has no keys sitting in the source"],
+    pass: (d) => (d.ignored
+      ? ["has no usable credentials in the source; its {#ignored|connection string} {ignored~points/point} only at hosts nobody outside can reach"]
+      : ["keeps credential-shaped strings out of the files scanned", "has no keys sitting in the source"]),
     warn: ["has {#soft|string} that look like credentials ({kinds}), probably public by design but ((worth))"],
     fail: ["has {#hard|credential} ({kinds}) committed in plain text"],
     fix: (d) => (d.hard
@@ -73,9 +75,15 @@ export const PHRASES = {
   },
   "common.secret-files": {
     pass: ["commits no .env or key files"],
-    warn: ["keeps {#testKeys|key file} among its test fixtures"],
-    fail: ["commits {files:3} to the repository"],
-    fix: ["Remove {files:3}, add {files~it/them} to .gitignore, and rotate whatever {files~it/they} held."],
+    warn: (d) => (d.configEnv
+      ? ["tracks {#configEnv|.env file} holding configuration but no secrets"]
+      : ["keeps {#testKeys|key file} among its test fixtures"]),
+    fail: ["commits secrets in {files:3}"],
+    fix: (d) => (d.files.length
+      ? ["Remove the secrets from {files:3}, add {files~it/them} to .gitignore, and rotate whatever {files~it/they} held."]
+      : d.configEnv
+        ? ["Rename the committed .env to .env.example, or ignore it, so a real password never lands in a tracked file."]
+        : ["Confirm the test key files are throwaway."]),
   },
   "common.moving-parts": {
     pass: (d) => (d.services

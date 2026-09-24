@@ -4,7 +4,7 @@
 
 import { prioritize, lineAt, TESTY, MINIFIED, VENDORED } from "../repo.js";
 import { pass, warn, fail, na, tiered, plural } from "../result.js";
-import { SECRETS, mask } from "../secrets.js";
+import { SECRETS, mask, envSecrets } from "../secrets.js";
 import { ECOSYSTEMS, DEV_MANIFEST, LISTENERS, HANDLERS, LOCK_IN, isPre1 } from "../ecosystems.js";
 
 // ------------------------------------------------------------- always-on map
@@ -263,13 +263,22 @@ async function gather(repo) {
 
   // ---- secrets
   const secrets = [];
+  // Matches that are not credentials anyone could use. Kept, with the reason,
+  // so the card can say what it looked at and why it let it go.
+  const harmless = [];
   for (const f of scanList) {
     const t = text.get(f.path);
     if (!t) continue;
     for (const s of SECRETS) {
       for (const m of t.matchAll(s.re)) {
-        if (s.ignore?.test(m[0]) || s.skipMatch?.(m)) continue;
-        secrets.push({ path: f.path, line: lineAt(t, m.index), note: `${s.name}: ${mask(m[1] ?? m[0])}`, severity: TESTY.test(f.path) ? "warn" : s.severity });
+        if (s.ignore?.test(m[0])) continue;
+        const at = { path: f.path, line: lineAt(t, m.index) };
+        const why = s.harmless?.(m);
+        if (why) {
+          harmless.push({ ...at, note: `${s.name} ${why}` });
+          continue;
+        }
+        secrets.push({ ...at, note: `${s.name}: ${mask(m[1] ?? m[0])}`, severity: TESTY.test(f.path) ? "warn" : s.severity });
       }
     }
   }
@@ -277,6 +286,14 @@ async function gather(repo) {
   const envFiles = repo.find(/(^|\/)\.env(\.[\w.-]+)?$/)
     .filter((f) => !/\.(example|sample|template|dist|defaults?|schema|tpl)$|\.example\.|\.sample\./i.test(f.path));
   const keyFiles = repo.find(/(^|\/)(id_rsa|id_dsa|id_ecdsa|id_ed25519)$|\.(pem|key|p12|pfx|jks|keystore)$/i);
+  // What each committed .env actually holds. A file that could not be read is
+  // treated as holding secrets: unknown is not safe.
+  const envReport = envFiles.map((f) => {
+    const t = text.get(f.path);
+    return t === undefined
+      ? { path: f.path, secrets: null }
+      : { path: f.path, secrets: envSecrets(t) };
+  });
 
   const dataFiles = repo.find(/\.(csv|tsv|jsonl|ndjson|parquet|avro|arrow|feather|orc|geojson|sqlite3?|db|xlsx?|xlsm|mdb|accdb|sav|dta|pbix|twbx?|numbers)$/i);
 
@@ -284,7 +301,7 @@ async function gather(repo) {
     readme: readmeFile ? { path: readmeFile.path, text: text.get(readmeFile.path) ?? null } : null,
     ci: repo.find(/^(\.github\/workflows\/[^/]+\.ya?ml|\.gitlab-ci\.ya?ml|\.circleci\/config\.ya?ml|azure-pipelines\.ya?ml|Jenkinsfile|\.travis\.ya?ml|bitbucket-pipelines\.ya?ml|\.drone\.ya?ml|\.woodpecker\.ya?ml|\.buildkite\/.+)$/i),
     tests: repo.find(/(^|\/)(test|tests|__tests__|spec|e2e)\/.+\.\w+$|\.(test|spec)\.\w+$|(^|\/)test_[^/]+\.py$|_test\.(go|py)$/),
-    alwaysOn, zero, zeroRuntime, workloads, secrets, envFiles, keyFiles, dataFiles, beasts,
+    alwaysOn, zero, zeroRuntime, workloads, secrets, harmless, envFiles, envReport, keyFiles, dataFiles, beasts,
     manifests: manifestFiles.length,
     otherManifests: ecoManifests.length, otherSources: otherSources.length,
     otherRuntime, otherListeners, otherHandlers,
@@ -424,10 +441,14 @@ const checks = [
       const hard = c.secrets.filter((s) => s.severity === "fail");
       const soft = c.secrets.filter((s) => s.severity === "warn");
       const kindsOf = (list) => [...new Set(list.map((s) => s.note.split(":")[0]))];
-      const data = { hard: hard.length, soft: soft.length, kinds: kindsOf(hard.length ? hard : soft) };
-      if (hard.length) return fail(`${plural(hard.length, "credential")} committed in plain text. Rotate them; deleting the line does not remove it from history.`, c.secrets, data);
-      if (soft.length) return warn(`${plural(soft.length, "possible credential")} (browser-side keys, test fixtures, or connection strings). Confirm each is meant to be public.`, soft, data);
-      return pass("No credential patterns found in the files scanned.", [], data);
+      const data = { hard: hard.length, soft: soft.length, kinds: kindsOf(hard.length ? hard : soft), ignored: c.harmless.length };
+      // Say what was looked at and let go, so a pass is not a mystery.
+      const letGo = c.harmless.length
+        ? ` ${plural(c.harmless.length, "connection string")} ignored: ${c.harmless.length === 1 ? "it points" : "they point"} at local, reserved, or internal-only hosts nobody outside can reach.`
+        : "";
+      if (hard.length) return fail(`${plural(hard.length, "credential")} committed in plain text. Rotate them; deleting the line does not remove it from history.${letGo}`, [...c.secrets, ...c.harmless], data);
+      if (soft.length) return warn(`${plural(soft.length, "possible credential")} (browser-side keys, test fixtures, or connection strings to reachable hosts). Confirm each is meant to be public.${letGo}`, [...soft, ...c.harmless], data);
+      return pass(`No credentials found in the files scanned.${letGo}`, c.harmless, data);
     },
   },
   {
@@ -437,9 +458,25 @@ const checks = [
     run({ common: c }) {
       const realKeys = c.keyFiles.filter((f) => !TESTY.test(f.path));
       const testKeys = c.keyFiles.filter((f) => TESTY.test(f.path));
-      const bad = [...c.envFiles, ...realKeys];
-      const data = { env: c.envFiles.length, keys: realKeys.length, testKeys: testKeys.length, files: bad.map((f) => f.path) };
-      if (bad.length) return fail(`${plural(bad.length, "secret-bearing file")} in the repository.`, bad.map((f) => ({ path: f.path })), data);
+      // A .env is judged by its contents: secret values, or unreadable (and so
+      // unknown), make it secret-bearing. Configuration alone does not.
+      const secretEnv = c.envReport.filter((e) => e.secrets === null || e.secrets.length);
+      const configEnv = c.envReport.filter((e) => e.secrets?.length === 0);
+      const bad = [...secretEnv.map((e) => ({ path: e.path })), ...realKeys];
+      const data = { env: secretEnv.length, configEnv: configEnv.length, keys: realKeys.length, testKeys: testKeys.length, files: bad.map((f) => f.path) };
+      if (bad.length) {
+        const evidence = [
+          ...secretEnv.flatMap((e) => (e.secrets === null
+            ? [{ path: e.path, note: "could not be read, so its contents are unknown" }]
+            : e.secrets.map((s) => ({ path: e.path, line: s.line, note: `${s.name}: ${s.why}` })))),
+          ...realKeys.map((f) => ({ path: f.path, note: "private key file" })),
+        ];
+        return fail(`${plural(bad.length, "secret-bearing file")} in the repository.`, evidence, data);
+      }
+      if (configEnv.length) {
+        return warn(`${plural(configEnv.length, ".env file")} committed, holding configuration but no secret values. Fine today; a tracked .env is where the next real password lands.`,
+          configEnv.map((e) => ({ path: e.path, note: "no secret values" })), data);
+      }
       if (testKeys.length) return warn(`${plural(testKeys.length, "key file")} under test fixtures. Probably throwaway, worth confirming.`, testKeys.map((f) => ({ path: f.path })), data);
       return pass("No .env files or private key files committed.", [], data);
     },

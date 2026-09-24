@@ -88,6 +88,12 @@ export const github = {
         license: info.license?.spdx_id ?? null,
       },
     });
+    // Provenance matters when judging a finding: in a fork, a committed
+    // password may be upstream's test fixture rather than anything this
+    // repo's owners wrote.
+    if (info.fork) {
+      repo.notices.push(`This is a fork${info.parent?.full_name ? ` of ${info.parent.full_name}` : ""}. Findings may come from upstream code, not from this repository's own commits.`);
+    }
     if (tree.truncated) {
       repo.notices.push("GitHub truncated the file list for this repository (it is very large). Checks below saw only part of it.");
     }

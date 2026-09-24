@@ -13,7 +13,7 @@ import { VALUE } from "./result.js";
 import { PACKS } from "./packs/index.js";
 
 /** Bump when a check changes, so cached scorecards are not served stale. */
-export const ENGINE_VERSION = 5;
+export const ENGINE_VERSION = 6;
 
 export const GRADES = [[90, "A"], [80, "B"], [70, "C"], [60, "D"], [0, "F"]];
 export const gradeFor = (score) => GRADES.find(([min]) => score >= min)[1];

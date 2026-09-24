@@ -14,6 +14,7 @@ import { countLock, packageOf, stripComments } from "../assets/scorecard/lib/pac
 import { parsePage } from "../assets/scorecard/lib/packs/web.js";
 import { PACKS } from "../assets/scorecard/lib/packs/index.js";
 import { narrate } from "../assets/scorecard/lib/narrate/index.js";
+import { unreachable, envSecrets } from "../assets/scorecard/lib/secrets.js";
 import { PHRASES } from "../assets/scorecard/lib/narrate/phrasebook.js";
 import { PATTERNS } from "../assets/scorecard/lib/narrate/patterns.js";
 import { expand, seeded, article, pluralize, numberWord, list, clauseList } from "../assets/scorecard/lib/narrate/grammar.js";
@@ -237,6 +238,38 @@ const readmeOnly = await scoreRepo(memoryRepo({ "README.md": words(200) }, {}, h
 for (const [label, card] of Object.entries({ flat, bloated, lwa, goTool, pyApp, csvapi, goServer, readmeOnly })) {
   t(`${label}: every rule is measured`, card.principles.filter((p) => p.score === null).map((p) => p.id), []);
 }
+
+// Connection-string passwords matter only when the host is reachable. These
+// are the airbrx/agor findings a reviewer correctly called harmless.
+t("loopback is unreachable", Boolean(unreachable("127.0.0.1")), true);
+t("reserved names are unreachable", [unreachable("redis.example"), unreachable("db.example.com"), unreachable("x.test")].every(Boolean), true);
+t("single-label hosts only resolve inside their network", Boolean(unreachable("host")) && Boolean(unreachable("agor-postgres")), true);
+t("real hosts are reachable", [unreachable("prod.abc123.us-east-1.rds.amazonaws.com"), unreachable("10.0.3.4"), unreachable("db.company.io")], [null, null, null]);
+const agorLike = await scoreRepo(memoryRepo({
+  "README.md": words(200),
+  ".env.example": "DATABASE_URL=postgresql://user:password@host:5432/agor\n",
+  ".github/workflows/postgres-integration.yml": "env:\n  DATABASE_URL: postgresql://agor:agor_dev_secret@127.0.0.1:5432/agor\n  REDIS_URL: redis://cache:secret@redis.example:6379\n",
+  "packages/core/src/config/deployment.test.ts": "const url = 'postgres://agor:agor_dev_secret@localhost:5432/agor';\n",
+}, {}, http));
+t("agor-like: dev and CI credentials are not findings", status(agorLike, "common.secrets"), "pass");
+const agorSecrets = agorLike.principles.flatMap((p) => p.checks).find((c) => c.id === "common.secrets");
+t("agor-like: what was let go is counted and shown", [agorSecrets.data.ignored, agorSecrets.evidence.length], [4, 4]);
+t("agor-like: the reason is stated", agorSecrets.evidence.some((e) => /127\.0\.0\.1, this machine only/.test(e.note)), true);
+const realDb = await scoreRepo(memoryRepo({
+  "config/prod.js": "module.exports = { db: 'postgres://app:password@prod-db.abc123.us-east-1.rds.amazonaws.com:5432/app' };\n",
+}, {}, http));
+t("a readable password on a reachable host is still flagged", status(realDb, "common.secrets"), "warn");
+
+// .env files are judged by what they hold, not by their name.
+t("env: configuration only", envSecrets("# compose profile\nCOMPOSE_PROFILES=postgres\nDATABASE_URL=postgresql://agor_app:pw@postgres:5432/agor\nDAEMON_PORT=4090\n"), []);
+t("env: placeholders are not secrets", envSecrets("API_KEY=\nJWT_SECRET=changeme\nTOKEN=${TOKEN}\nPASSWORD=<your password>\n"), []);
+t("env: names, never values", envSecrets("JWT_SECRET=9f8a7b6c5d4e\nDATABASE_URL=postgres://u:realpw@db.company.io/app\n").map((s) => `${s.name}@${s.line}: ${s.why}`),
+  ["JWT_SECRET@1: a secret-named variable with a value", "DATABASE_URL@2: credentials for db.company.io"]);
+const envConfig = await scoreRepo(memoryRepo({ ".env.postgres": "COMPOSE_PROFILES=postgres\nDATABASE_URL=postgresql://a:b@postgres:5432/x\n" }, {}, http));
+t("committed config-only .env warns, not fails", status(envConfig, "common.secret-files"), "warn");
+const envReal = await scoreRepo(memoryRepo({ ".env": "STRIPE_SECRET=sk_test_abcdefghijklmnop1234\n" }, {}, http));
+t("committed .env with a secret fails", status(envReal, "common.secret-files"), "fail");
+t("…and the evidence names the variable, not the value", JSON.stringify(envReal).includes("sk_test_abcdefghijklmnop1234"), false);
 
 // A failing read is named, not dropped.
 const broken = memoryRepo({ "package.json": "{ not json", "README.md": words(200) }, {}, http);
