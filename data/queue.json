@@ -1,0 +1,326 @@
+{
+  "generatedAt": "2026-09-03T17:31:47.262Z",
+  "from": "2026-09-03.json",
+  "count": 11,
+  "items": [
+    {
+      "title": "NVIDIA’s GPU Price Surge May Push Indian Cloud Costs Up 20%",
+      "url": "https://news.google.com/rss/articles/CBMimwFBVV95cUxOLTZwcHFMNjF5Z1ZSeWRSbGZGZ3NVMFBGd2hlWlpEckxxeTlrckpyQTdkR0NqUG5adWl1aWFPVUtNaE1ORTdvcFNlSnBDaVBxLTU4a3VTV2JIV3B1b2hwNG5RbUphMTVBc2Jjb1NNeVY3NlFCOVVUbnBKSWxneXZwVHBaRUE3cTVqZTVfMUVucFZiQl9jTHJ1bEUySQ?oc=5",
+      "description": "<a href=\"https://news.google.com/rss/articles/CBMimwFBVV95cUxOLTZwcHFMNjF5Z1ZSeWRSbGZGZ3NVMFBGd2hlWlpEckxxeTlrckpyQTdkR0NqUG5adWl1aWFPVUtNaE1ORTdvcFNlSnBDaVBxLTU4a3VTV2JIV3B1b2hwNG5RbUphMTVBc2Jjb1NNeVY3NlFCOVVUbnBKSWxneXZwVHBaRUE3cTVqZTVfMUVucFZiQl9jTHJ1bEUySQ?oc=5\" target=\"_blank\">NVIDIA’s GPU Price Surge May Push Indian Cloud Costs Up 20%</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">analyticsindiamag.com</font>",
+      "source": "Google News",
+      "publishedAt": "2026-08-31T12:41:21.000Z",
+      "publisher": "analyticsindiamag.com",
+      "sourceQuery": "cloud costs",
+      "score": 36,
+      "rawScore": 42,
+      "ageDays": 3.2,
+      "category": "BILL_SHOCK",
+      "categoryLabel": "Bill Shock",
+      "categoryThesis": "The invoice arrived and nobody could explain it.",
+      "allCategories": [
+        "BILL_SHOCK"
+      ],
+      "flatStackAngle": "precompute-and-cache",
+      "flatStackRebuttal": "The query didn't need a live warehouse. Precompute the answer once, park it as a file, serve it from the edge for a rounding error.",
+      "hasStrongSignal": true,
+      "money": null,
+      "vendors": [
+        "nvidia"
+      ],
+      "why": [
+        "+26 Bill Shock [cloud costs]",
+        "+10 strong-signal match",
+        "+6 named vendor [nvidia]",
+        "x0.85 age 3.2d"
+      ]
+    },
+    {
+      "title": "How the data center backlash is growing in U.S. statehouses",
+      "url": "https://news.google.com/rss/articles/CBMiogFBVV95cUxNdHd0ZGthSDVzTTRSQVRkUllQSV9namdoc0JreU41RV9MZ1RPeUJoOGQtQW51dkpvYktzZHhoVk9QcGtYeDFXV2dfQ1RieDU0TUtYUm9TUVNqZk9CRldfMmZqNzhjOGY3NUFvTUxROHY5eTFBLXNMbkt2bTNXTHlGUlFpenFiYlVOS2NyOWNRakIwclFTSFo0QUc0N1h5ODhOZVE?oc=5",
+      "description": "<a href=\"https://news.google.com/rss/articles/CBMiogFBVV95cUxNdHd0ZGthSDVzTTRSQVRkUllQSV9namdoc0JreU41RV9MZ1RPeUJoOGQtQW51dkpvYktzZHhoVk9QcGtYeDFXV2dfQ1RieDU0TUtYUm9TUVNqZk9CRldfMmZqNzhjOGY3NUFvTUxROHY5eTFBLXNMbkt2bTNXTHlGUlFpenFiYlVOS2NyOWNRakIwclFTSFo0QUc0N1h5ODhOZVE?oc=5\" target=\"_blank\">How the data center backlash is growing in U.S. statehouses</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">The Washington Post</font>",
+      "source": "Google News",
+      "publishedAt": "2026-09-03T16:35:43.000Z",
+      "publisher": "The Washington Post",
+      "sourceQuery": "data center water",
+      "score": 35,
+      "rawScore": 35,
+      "ageDays": 0,
+      "category": "DC_BUILDOUT",
+      "categoryLabel": "Datacenter Buildout",
+      "categoryThesis": "The answer to every question is another building.",
+      "allCategories": [
+        "DC_BUILDOUT"
+      ],
+      "flatStackAngle": "the-physical-bill",
+      "flatStackRebuttal": "Every abstraction eventually bills you in megawatts. The cheapest datacenter is the one your architecture never needed.",
+      "hasStrongSignal": true,
+      "money": null,
+      "vendors": [],
+      "why": [
+        "+25 Datacenter Buildout [data center backlash, data center]",
+        "+10 strong-signal match",
+        "x1.00 age 0.0d"
+      ]
+    },
+    {
+      "title": "Private AI cloud shift pulls AI workloads back on-premises",
+      "url": "https://news.google.com/rss/articles/CBMipgFBVV95cUxQUjVwb2QxaTVVQW9Ncko2OTdxX1VleHgwRFRjUkF1WVZFNzZKRHI5OUhoeUM1a0poOVI4N3pQWVVKZ1F1ZndyN1Z4TDJjdXVfYzlSQ29FRTJ3TTZZMzlkWGRCR2pXclpCQ01wdm8ydF9yYXNDS1VHMnBoWVl0eFdzWU0wTzQxSWNTR0JKVkpBX25sOXVRZ2NzMm5sb09DSnRFMFE3YU5n?oc=5",
+      "description": "<a href=\"https://news.google.com/rss/articles/CBMipgFBVV95cUxQUjVwb2QxaTVVQW9Ncko2OTdxX1VleHgwRFRjUkF1WVZFNzZKRHI5OUhoeUM1a0poOVI4N3pQWVVKZ1F1ZndyN1Z4TDJjdXVfYzlSQ29FRTJ3TTZZMzlkWGRCR2pXclpCQ01wdm8ydF9yYXNDS1VHMnBoWVl0eFdzWU0wTzQxSWNTR0JKVkpBX25sOXVRZ2NzMm5sb09DSnRFMFE3YU5n?oc=5\" target=\"_blank\">Private AI cloud shift pulls AI workloads back on-premises</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">SiliconANGLE</font>",
+      "source": "Google News",
+      "publishedAt": "2026-08-31T17:23:00.000Z",
+      "publisher": "SiliconANGLE",
+      "sourceQuery": "cloud costs",
+      "score": 34,
+      "rawScore": 40,
+      "ageDays": 3,
+      "category": "REPATRIATION",
+      "categoryLabel": "Repatriation",
+      "categoryThesis": "They did the math and went home.",
+      "allCategories": [
+        "REPATRIATION"
+      ],
+      "flatStackAngle": "own-your-storage",
+      "flatStackRebuttal": "Their data was hostage to the engine that read it. Open formats on object storage means the engine is a choice, not a landlord.",
+      "hasStrongSignal": true,
+      "money": null,
+      "vendors": [],
+      "why": [
+        "+30 Repatriation [back on-prem, on-premises, on-prem]",
+        "+10 strong-signal match",
+        "x0.86 age 3.0d"
+      ]
+    },
+    {
+      "title": "Cloud costs threaten margins behind fintech boom",
+      "url": "https://news.google.com/rss/articles/CBMiwgFBVV95cUxQV3hoSnYteHdGU1BjbEZXMC04RWtoSmNaRzBzOUJaUFB0MS1Nd0gzMWdqcVh4RFJmNGgxNGVZSHIyeFk1ZDB2ZjRuWGI5QWZEOXFWNFJLZ0E5OUlXdUoySVlpbW9yU0RsbEw3ckJnT1JDemhSdVk1UTk1T0pxNENuQV9PeFdGUTRsajdRVFBHNjFHTkMydUViLS1neGU5TUxiRlZ3Unk5ZFNBQkFTQXhOYS1iMnNXTWpMYkMtbHFsY0Nhdw?oc=5",
+      "description": "<a href=\"https://news.google.com/rss/articles/CBMiwgFBVV95cUxQV3hoSnYteHdGU1BjbEZXMC04RWtoSmNaRzBzOUJaUFB0MS1Nd0gzMWdqcVh4RFJmNGgxNGVZSHIyeFk1ZDB2ZjRuWGI5QWZEOXFWNFJLZ0E5OUlXdUoySVlpbW9yU0RsbEw3ckJnT1JDemhSdVk1UTk1T0pxNENuQV9PeFdGUTRsajdRVFBHNjFHTkMydUViLS1neGU5TUxiRlZ3Unk5ZFNBQkFTQXhOYS1iMnNXTWpMYkMtbHFsY0Nhdw?oc=5\" target=\"_blank\">Cloud costs threaten margins behind fintech boom</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">Business News Nigeria</font>",
+      "source": "Google News",
+      "publishedAt": "2026-09-02T08:27:33.000Z",
+      "publisher": "Business News Nigeria",
+      "sourceQuery": "cloud costs",
+      "score": 34,
+      "rawScore": 36,
+      "ageDays": 1.4,
+      "category": "BILL_SHOCK",
+      "categoryLabel": "Bill Shock",
+      "categoryThesis": "The invoice arrived and nobody could explain it.",
+      "allCategories": [
+        "BILL_SHOCK"
+      ],
+      "flatStackAngle": "precompute-and-cache",
+      "flatStackRebuttal": "The query didn't need a live warehouse. Precompute the answer once, park it as a file, serve it from the edge for a rounding error.",
+      "hasStrongSignal": true,
+      "money": null,
+      "vendors": [],
+      "why": [
+        "+26 Bill Shock [cloud costs]",
+        "+10 strong-signal match",
+        "x0.93 age 1.4d"
+      ]
+    },
+    {
+      "title": "Indian Enterprises Adopt FinOps to Control Cloud Spending",
+      "url": "https://news.google.com/rss/articles/CBMizgFBVV95cUxPU0FBUEZLRmdybG8wREdnZUs5UFZjUGtOMFoyMkxFd2R0c2hpZUxzQkExV0xJOWhJUXhxWHNSMDZZa3Vac0o2c05zcHZKdll6TVJ5QjFRQjlpSF91cjZsakxEbGdaSklsREVkbFdfTHh1V2hlNUNLX0ZRMUk4TTZmYVBCVUk1LW4zTjB4MEo1aXVQblR0aUNsNjFpSkdnWnZ4YUZzR3pVN3VKNEdFNnVZZFVaTGl2MV9zWUtVeG5kM1o0OEFSSVBkYU5YQThsZw?oc=5",
+      "description": "<a href=\"https://news.google.com/rss/articles/CBMizgFBVV95cUxPU0FBUEZLRmdybG8wREdnZUs5UFZjUGtOMFoyMkxFd2R0c2hpZUxzQkExV0xJOWhJUXhxWHNSMDZZa3Vac0o2c05zcHZKdll6TVJ5QjFRQjlpSF91cjZsakxEbGdaSklsREVkbFdfTHh1V2hlNUNLX0ZRMUk4TTZmYVBCVUk1LW4zTjB4MEo1aXVQblR0aUNsNjFpSkdnWnZ4YUZzR3pVN3VKNEdFNnVZZFVaTGl2MV9zWUtVeG5kM1o0OEFSSVBkYU5YQThsZw?oc=5\" target=\"_blank\">Indian Enterprises Adopt FinOps to Control Cloud Spending</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">Whalesbook</font>",
+      "source": "Google News",
+      "publishedAt": "2026-09-02T18:58:28.000Z",
+      "publisher": "Whalesbook",
+      "sourceQuery": "cloud costs",
+      "score": 34,
+      "rawScore": 36,
+      "ageDays": 0.9,
+      "category": "BILL_SHOCK",
+      "categoryLabel": "Bill Shock",
+      "categoryThesis": "The invoice arrived and nobody could explain it.",
+      "allCategories": [
+        "BILL_SHOCK"
+      ],
+      "flatStackAngle": "precompute-and-cache",
+      "flatStackRebuttal": "The query didn't need a live warehouse. Precompute the answer once, park it as a file, serve it from the edge for a rounding error.",
+      "hasStrongSignal": true,
+      "money": null,
+      "vendors": [],
+      "why": [
+        "+26 Bill Shock [cloud spend]",
+        "+10 strong-signal match",
+        "x0.95 age 0.9d"
+      ],
+      "alsoSeenIn": [
+        "Google News"
+      ]
+    },
+    {
+      "title": "State Senate Hearing Highlights Communication Gaps on Data Center Water Usage",
+      "url": "https://news.google.com/rss/articles/CBMi9gFBVV95cUxPNXZ6RXZvT3cwLXFzMWpQdVc5cUtsQkM5V2dsVV9OeU96bS1pbUlVczNpM2NMMVJzYTFBeUJwcldCem9LY29pNklYdldMTFZvMTRTcFFuenhzeks3WHpXM2s4NkRKZHVlTUxZUXUtVVNPMTAzdWR6UFppSGF3LVROSzJlTlhPeDBtWXltYjI0a0MwR0Z6ZWlrYldUa0FnLWppYTd5cWpHTWtrc05MbUppQmhRS1g2ZVh4R3cwMEtZYmdoQ3RhaFdwSlFsd3JxSXpKQ2V4dS1TeV9RUTBEQi1HTHFBUlRZZUlKc3A4bnlhWE9Td1dtSGc?oc=5",
+      "description": "<a href=\"https://news.google.com/rss/articles/CBMi9gFBVV95cUxPNXZ6RXZvT3cwLXFzMWpQdVc5cUtsQkM5V2dsVV9OeU96bS1pbUlVczNpM2NMMVJzYTFBeUJwcldCem9LY29pNklYdldMTFZvMTRTcFFuenhzeks3WHpXM2s4NkRKZHVlTUxZUXUtVVNPMTAzdWR6UFppSGF3LVROSzJlTlhPeDBtWXltYjI0a0MwR0Z6ZWlrYldUa0FnLWppYTd5cWpHTWtrc05MbUppQmhRS1g2ZVh4R3cwMEtZYmdoQ3RhaFdwSlFsd3JxSXpKQ2V4dS1TeV9RUTBEQi1HTHFBUlRZZUlKc3A4bnlhWE9Td1dtSGc?oc=5\" target=\"_blank\">State Senate Hearing Highlights Communication Gaps on Data Center Water Usage</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">thetexan.news</font>",
+      "source": "Google News",
+      "publishedAt": "2026-09-03T10:09:00.000Z",
+      "publisher": "thetexan.news",
+      "sourceQuery": "data center water",
+      "score": 34,
+      "rawScore": 35,
+      "ageDays": 0.3,
+      "category": "DC_BUILDOUT",
+      "categoryLabel": "Datacenter Buildout",
+      "categoryThesis": "The answer to every question is another building.",
+      "allCategories": [
+        "DC_BUILDOUT"
+      ],
+      "flatStackAngle": "the-physical-bill",
+      "flatStackRebuttal": "Every abstraction eventually bills you in megawatts. The cheapest datacenter is the one your architecture never needed.",
+      "hasStrongSignal": true,
+      "money": null,
+      "vendors": [],
+      "why": [
+        "+25 Datacenter Buildout [water usage, data center]",
+        "+10 strong-signal match",
+        "x0.98 age 0.3d"
+      ]
+    },
+    {
+      "title": "Technology could cut water usage by data centers. Will it be required by Texas law?",
+      "url": "https://news.google.com/rss/articles/CBMitAFBVV95cUxORVVISHJuMS1wLTlfZGNoaGdDcGNCaVI4U0MtSHFtdV9WOW45TTRTbmE5RFpnalhlak1qQkdta3dsWkZkTURJOFFaNkNabl9mRWhxdmpLRmxBcG5wZm5sd3c5WGFfODlSS0xaa2xxN2szc3Y0RXpSaWw1VFBHN1h6Z0dyVFo0cDRadmRSbzVyMEpoakoySlRVRENvWXJXdERNdWZRbmhlaWhaRm4zU1VCejVCeEM?oc=5",
+      "description": "<a href=\"https://news.google.com/rss/articles/CBMitAFBVV95cUxORVVISHJuMS1wLTlfZGNoaGdDcGNCaVI4U0MtSHFtdV9WOW45TTRTbmE5RFpnalhlak1qQkdta3dsWkZkTURJOFFaNkNabl9mRWhxdmpLRmxBcG5wZm5sd3c5WGFfODlSS0xaa2xxN2szc3Y0RXpSaWw1VFBHN1h6Z0dyVFo0cDRadmRSbzVyMEpoakoySlRVRENvWXJXdERNdWZRbmhlaWhaRm4zU1VCejVCeEM?oc=5\" target=\"_blank\">Technology could cut water usage by data centers. Will it be required by Texas law?</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">KEYE</font>",
+      "source": "Google News",
+      "publishedAt": "2026-09-03T01:53:09.000Z",
+      "publisher": "KEYE",
+      "sourceQuery": "data center water",
+      "score": 34,
+      "rawScore": 35,
+      "ageDays": 0.7,
+      "category": "DC_BUILDOUT",
+      "categoryLabel": "Datacenter Buildout",
+      "categoryThesis": "The answer to every question is another building.",
+      "allCategories": [
+        "DC_BUILDOUT"
+      ],
+      "flatStackAngle": "the-physical-bill",
+      "flatStackRebuttal": "Every abstraction eventually bills you in megawatts. The cheapest datacenter is the one your architecture never needed.",
+      "hasStrongSignal": true,
+      "money": null,
+      "vendors": [],
+      "why": [
+        "+25 Datacenter Buildout [water usage, data center]",
+        "+10 strong-signal match",
+        "x0.97 age 0.7d"
+      ]
+    },
+    {
+      "title": "Driving efficient water usage through closed-loop cooling",
+      "url": "https://news.google.com/rss/articles/CBMirAFBVV95cUxPdGxQM3VRci0yY1lCeXlBR2huVGFNWVRjNDJaTTZhaHktYXRLWFhMX2ZBQnpkRWNUOGF2dHE1Yl9vYVdyV0FWcjRTaVBVcXNCTk51d0N2RTdWMkF2ZGMyWWJic2t0a2RXRkNJelZhb2NkY0tKdjZRREEtWXYyM1FxdFJuRFh1cndfVndxcm5sNkstWTJ4SVg3MF9iTXBTSE5FTHZDM0JaX3JSZVky?oc=5",
+      "description": "<a href=\"https://news.google.com/rss/articles/CBMirAFBVV95cUxPdGxQM3VRci0yY1lCeXlBR2huVGFNWVRjNDJaTTZhaHktYXRLWFhMX2ZBQnpkRWNUOGF2dHE1Yl9vYVdyV0FWcjRTaVBVcXNCTk51d0N2RTdWMkF2ZGMyWWJic2t0a2RXRkNJelZhb2NkY0tKdjZRREEtWXYyM1FxdFJuRFh1cndfVndxcm5sNkstWTJ4SVg3MF9iTXBTSE5FTHZDM0JaX3JSZVky?oc=5\" target=\"_blank\">Driving efficient water usage through closed-loop cooling</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">Data Center Dynamics</font>",
+      "source": "Google News",
+      "publishedAt": "2026-09-02T07:01:42.000Z",
+      "publisher": "Data Center Dynamics",
+      "sourceQuery": "data center water",
+      "score": 34,
+      "rawScore": 37,
+      "ageDays": 1.4,
+      "category": "DC_BUILDOUT",
+      "categoryLabel": "Datacenter Buildout",
+      "categoryThesis": "The answer to every question is another building.",
+      "allCategories": [
+        "DC_BUILDOUT"
+      ],
+      "flatStackAngle": "the-physical-bill",
+      "flatStackRebuttal": "Every abstraction eventually bills you in megawatts. The cheapest datacenter is the one your architecture never needed.",
+      "hasStrongSignal": true,
+      "money": null,
+      "vendors": [],
+      "why": [
+        "+27 Datacenter Buildout [water usage, data center, cooling]",
+        "+10 strong-signal match",
+        "x0.93 age 1.4d"
+      ]
+    },
+    {
+      "title": "Phoenix data center firm raises $1B to repurpose older facilities amid construction backlash",
+      "url": "https://news.google.com/rss/articles/CBMikwFBVV95cUxPdEVGeHVpejhDdnBVOE1uTWZwellJcGRGLWF2LWUyVnlsTVhQMFJXMkp6UFZNOF81Tlp1SVBfTVIzUzlJMzJ3MVFXVE52TVR3eEFFekFkcGF6cXh4LUYtaktwQmFXVzlWbEZIY2xEdEdmeDk4MDJBWWNnQklvbEF2cHhRc2pucmkwaGNVcmRHSHdLUmM?oc=5",
+      "description": "<a href=\"https://news.google.com/rss/articles/CBMikwFBVV95cUxPdEVGeHVpejhDdnBVOE1uTWZwellJcGRGLWF2LWUyVnlsTVhQMFJXMkp6UFZNOF81Tlp1SVBfTVIzUzlJMzJ3MVFXVE52TVR3eEFFekFkcGF6cXh4LUYtaktwQmFXVzlWbEZIY2xEdEdmeDk4MDJBWWNnQklvbEF2cHhRc2pucmkwaGNVcmRHSHdLUmM?oc=5\" target=\"_blank\">Phoenix data center firm raises $1B to repurpose older facilities amid construction backlash</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">The Business Journals</font>",
+      "source": "Google News",
+      "publishedAt": "2026-09-03T12:00:00.000Z",
+      "publisher": "The Business Journals",
+      "sourceQuery": "data center water",
+      "score": 34,
+      "rawScore": 34,
+      "ageDays": 0.2,
+      "category": "DC_BUILDOUT",
+      "categoryLabel": "Datacenter Buildout",
+      "categoryThesis": "The answer to every question is another building.",
+      "allCategories": [
+        "DC_BUILDOUT"
+      ],
+      "flatStackAngle": "the-physical-bill",
+      "flatStackRebuttal": "Every abstraction eventually bills you in megawatts. The cheapest datacenter is the one your architecture never needed.",
+      "hasStrongSignal": true,
+      "money": {
+        "usd": 1000000000,
+        "label": "$1B"
+      },
+      "vendors": [],
+      "why": [
+        "+25 Datacenter Buildout [construction backlash, data center]",
+        "+10 strong-signal match",
+        "+24 concrete figure ($1B)",
+        "-25 marketing/finance signal [raises $]",
+        "x0.99 age 0.2d"
+      ]
+    },
+    {
+      "title": "Data center backlash unites some Missouri and Kansas towns against lawmakers and big tech",
+      "url": "https://news.google.com/rss/articles/CBMinAFBVV95cUxQT3RPdF9GTmpyM2tDZE9FRHdhOE5ZQXZXRkpFMGVielNpanY2dm56QU8tWFJpNF9YUUZRMnBaTWNQQW12NHhZWXpOOEx0dHdVUWhia1JPaUxBRG1lUVlBUnN3UTFPQkVVbzBIUG91SHlWeUlPcjdOLUFIdkY2SWw0dFRxUWlEVG5JdUNySTRvWWIxSFh0ZmlGU2JNajY?oc=5",
+      "description": "<a href=\"https://news.google.com/rss/articles/CBMinAFBVV95cUxQT3RPdF9GTmpyM2tDZE9FRHdhOE5ZQXZXRkpFMGVielNpanY2dm56QU8tWFJpNF9YUUZRMnBaTWNQQW12NHhZWXpOOEx0dHdVUWhia1JPaUxBRG1lUVlBUnN3UTFPQkVVbzBIUG91SHlWeUlPcjdOLUFIdkY2SWw0dFRxUWlEVG5JdUNySTRvWWIxSFh0ZmlGU2JNajY?oc=5\" target=\"_blank\">Data center backlash unites some Missouri and Kansas towns against lawmakers and big tech</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">KCUR</font>",
+      "source": "Google News",
+      "publishedAt": "2026-09-02T09:00:00.000Z",
+      "publisher": "KCUR",
+      "sourceQuery": "data center water",
+      "score": 33,
+      "rawScore": 35,
+      "ageDays": 1.4,
+      "category": "DC_BUILDOUT",
+      "categoryLabel": "Datacenter Buildout",
+      "categoryThesis": "The answer to every question is another building.",
+      "allCategories": [
+        "DC_BUILDOUT"
+      ],
+      "flatStackAngle": "the-physical-bill",
+      "flatStackRebuttal": "Every abstraction eventually bills you in megawatts. The cheapest datacenter is the one your architecture never needed.",
+      "hasStrongSignal": true,
+      "money": null,
+      "vendors": [],
+      "why": [
+        "+25 Datacenter Buildout [data center backlash, data center]",
+        "+10 strong-signal match",
+        "x0.94 age 1.4d"
+      ]
+    },
+    {
+      "title": "“240,000 Jobs Wiped Out in 18 Months” Big Tech Layoffs Fueled by GPU Spending, Profitability Pressure, and Pandemic-Era Overhiring",
+      "url": "https://news.google.com/rss/articles/CBMiV0FVX3lxTFBvTXdqanJzZW9icFJuZjlxSk50OVpmTDc0MVVxd1Q2MW9vRHlydVl1YVpWbTRYcHNMR0lkMUUtOFFiOHNNTlAyLUotYkphM1AxZ1pkbDg3TQ?oc=5",
+      "description": "<a href=\"https://news.google.com/rss/articles/CBMiV0FVX3lxTFBvTXdqanJzZW9icFJuZjlxSk50OVpmTDc0MVVxd1Q2MW9vRHlydVl1YVpWbTRYcHNMR0lkMUUtOFFiOHNNTlAyLUotYkphM1AxZ1pkbDg3TQ?oc=5\" target=\"_blank\">“240,000 Jobs Wiped Out in 18 Months” Big Tech Layoffs Fueled by GPU Spending, Profitability Pressure, and Pandemic-Era Overhiring</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">economy.ac</font>",
+      "source": "Google News",
+      "publishedAt": "2026-08-28T07:16:44.000Z",
+      "publisher": "economy.ac",
+      "sourceQuery": "AI spending returns",
+      "score": 24,
+      "rawScore": 33,
+      "ageDays": 6.4,
+      "category": "AI_COMPUTE_BURN",
+      "categoryLabel": "AI Compute Burn",
+      "categoryThesis": "They bought the GPUs before they found the use case.",
+      "allCategories": [
+        "AI_COMPUTE_BURN"
+      ],
+      "flatStackAngle": "compute-on-purpose",
+      "flatStackRebuttal": "Compute should be summoned, not stationed. If it runs when nobody is asking, that is not infrastructure, it is a subscription to your own idle time.",
+      "hasStrongSignal": true,
+      "money": null,
+      "vendors": [],
+      "why": [
+        "+23 AI Compute Burn [gpu spend]",
+        "+10 strong-signal match",
+        "x0.73 age 6.4d"
+      ]
+    }
+  ]
+}

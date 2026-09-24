@@ -1,0 +1,25 @@
+data/raw/
+.gstack/
+node_modules/
+
+# Generated from config.json by infra/deploy-admin-ui.mjs. Committing it would
+# put the Google client id in two places and let them drift.
+admin/ui/config.json
+
+# This repository is public. Kept local only:
+#   config.local.json   account-specific IDs written by infra/ (see infra/shared/local-config.mjs)
+#   docs/HARDENING.md   the admin plane's open security work, until it is closed
+#   draft articles      unpublished pieces; add each new draft here until it ships
+config.local.json
+docs/HARDENING.md
+articles/2026-09-03-instantdb-is-shutting-down.json
+articles/2026-09-04-every-scanner-assumes-you-run-wordpress.json
+
+# Build output, regenerated from source:
+#   site/                  node pipeline/build.mjs
+#   infra/lambda-build/    node infra/build-lambda.mjs (and the zip)
+#   admin/ui/ckeditor.js   cd admin/editor && npm ci && npx webpack
+site/
+infra/lambda-build/
+infra/stz-admin.zip
+admin/ui/ckeditor.js

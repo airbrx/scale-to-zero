@@ -1,0 +1,80 @@
+{
+  "_doc": "The publication's edition of the airbrx flat-stack doctrine. Localized: same argument and the same ten principles, reframed for a daily column instead of a product page. Edit here, not in build.mjs.",
+
+  "title": "The Flat Stack",
+  "standfirst": "Use as close to nothing as possible. Almost no running computers, almost no moving parts. Less to pay for, less to break, less to defend.",
+  "dek": "This is the argument every article on this site is measured against. It is the reader's edition of the engineering doctrine airbrx builds by.",
+
+  "sections": [
+    {
+      "heading": "How we got here",
+      "body": "There was a time when adding a database to your stack was a decision.\n\nIt meant a procurement conversation. A capacity plan. A DBA who owned it. A security review. An onboarding runbook, and the person who had to write it. All of that was friction, and everyone hated the friction. The friction was quietly doing a job nobody noticed: it was due diligence. Every piece of your stack had to earn its place before it got one.\n\nThen the cloud made adding things free.\n\nNot free to own. Free to *add*. A new database is a few more lines in a template. A new queue, a new cache, a new vector store, a second warehouse: a few more lines each. The cost of adding collapsed to nearly zero. The cost of owning — the bill, the attack surface, the 3am page, the thing that breaks because a dependency three layers away changed under you — stayed exactly as high as it ever was. It just got harder to see.\n\nWe celebrated this. We called it velocity.\n\nAnd now AI removes the last friction that was left. The human who at least had to type the lines does not type them anymore. The model adds the Redis because production systems have a Redis. It adds the second warehouse because the pattern says production looks like that. Nobody decided. The stack grows because growing is frictionless, and every line of infrastructure-as-code becomes a decision no human actually made.\n\nThis is how the enterprise stack got the way it is. Not through bad engineers. Through the steady, celebrated removal of every constraint that used to force a moment of thought.\n\n**That is the story this publication reports on.** Every article here is a case of someone finding out what the owning cost, long after the adding was free."
+    },
+    {
+      "heading": "What a flat stack is",
+      "body": "A flat stack means using as close to nothing as possible. Almost no running computers. Almost no moving parts. Less to pay for, less to break, less to defend. Where the enterprise stack adds by default, a flat stack subtracts by default, and makes everything that survives justify its place.\n\nThis is not nostalgia, and it is not a complaint about the cloud. Just the opposite: the cloud is the reason a flat stack is possible at all. Scale-to-zero. Ephemeral compute. Cheap object storage you can read directly. The same code running in three places without a rewrite. None of it existed before the cloud invented it. The very primitives that let the enterprise stack bloat are the primitives a flat stack is built from.\n\nSo the cloud was never the enemy. It is a tool. The difference was never whether you use the cloud. It is whether you use it to add without thinking, or to subtract on purpose.\n\nWe build with AI every day. We ship to AWS and Azure. We are not romantic about the old paradigms and not evangelists for the new shiny ones. A flat stack is simply the discipline the cloud deleted, put back, without giving up the speed the cloud gave us.\n\nIt is a way of building where every dependency is a decision someone made on purpose, where the balance sheet is treated as a real stakeholder in the room, and where the default answer to *should we add this?* is no, until proven otherwise."
+    },
+    {
+      "heading": "Change is the only constant",
+      "body": "Nothing about your business will stay still. You will enter a market with data-residency laws you did not have last quarter. You will acquire a company and inherit a second stack overnight. You will add ten times the customers, or a new product line, or a regulation will land, or the CFO will need the number cut by Friday. The business changes. It always changes.\n\nAnd we do not change for the sake of changing. A newer warehouse is never the reason. We change for exactly one reason: the business needs us to.\n\nThat is what agility is for. Not being light, or first, or loudest about the new thing — that is fashion. Agility is keeping your center of gravity low, so that when the business moves, the technology moves with it instead of becoming the anchor that holds the business in place. A fighter in a low stance is hard to knock down and can move in any direction. **A tower goes up fast and comes down in a strong wind.**\n\nHere is the subtle part: data has gravity, and that is fine. Data is mass, and mass pulls everything toward it. You want your data in one place; one source of truth beats a dozen drifting copies. Centralizing the data was never the mistake.\n\nThe mistake is locking that data inside a proprietary, always-on engine that owns the only door to it. Your data ends up somewhere you cannot touch without paying the keeper who sits on top of it. Every query, every export, every look, on their terms and at their price. The warehouse stops being a tool you use and becomes the gate standing between you and data you already own.\n\nA flat stack keeps the data in one place too. It just insists the place be yours: open storage like S3, open formats anyone can read, reachable directly by your tools and by you, with the warehouse as one consumer of that data, woken only when you genuinely need its horsepower. Flat means you get to touch the data too.\n\nYou cannot repeal data gravity, and you should not try. But you do not have to hand the keys to your own data to the engine sitting on top of it.\n\nThat is what the name means. A stack is vertical: things piled on things, top-heavy, your own data held at the top of someone else's tower where you have to climb, and pay, to reach it. A *flat* stack lays it down. The data sits low and in the open, close to whoever needs it. The heavy engine is engaged only when it truly must be."
+    },
+    {
+      "heading": "The North Star",
+      "kicker": "What this publication measures every story against.",
+      "body": "A flat stack is not an aesthetic. It is the only architecture we have found that delivers four things at the same time, without asking anyone to change a single workflow:\n\n**Costs go down.** A stack with almost nothing running has almost nothing to bill. You do not optimize the warehouse; you keep it asleep.\n\n**Data gets faster.** The fastest query is the one that never has to wake the warehouse at all. Served from a predictable key, the answer is already there.\n\n**Control gets precise.** A system built on reproducible keys is a system you can reason about, govern, and audit. Predictability is not just cheap, it is controllable.\n\n**It stays secure.** Every dependency you do not take on is an attack surface you do not have to defend. The smallest stack is also the safest one.\n\nThe enterprise stack made all four a tradeoff: pick two, pay for the rest. A flat stack makes them the same decision.\n\nWhen an article here asks *what would this have cost with almost no running computers*, these four are the scoreboard."
+    }
+  ],
+
+  "principlesHeading": "The Southern Cross",
+  "principlesKicker": "How it gets built. Ten rules, and the reason each article's rebuttal writes itself.",
+
+  "principles": [
+    {
+      "name": "Do not wake the Beast.",
+      "body": "The warehouse bills you precisely when it runs, so do not run it. Answer from a predictable key, not a fresh query. A sleeping Beast does not bill."
+    },
+    {
+      "name": "Keep your center of gravity low.",
+      "body": "Data belongs in one place, and that place should be *yours*. Open storage you control, in formats anyone can read, reachable directly. Not locked inside an engine that rents you the only door to your own data. Keep it low and open and you can follow the business anywhere. Pile it at the top of someone else's tower and you pay to climb."
+    },
+    {
+      "name": "The balance sheet is the product owner.",
+      "body": "Do not start with a technology and hunt for a problem. Start with what it costs the business and build backward. Every architectural decision is a financial one. Treat it like one."
+    },
+    {
+      "name": "Security, availability, and resilience are not features.",
+      "body": "They are the foundation, and they fail together. Security at the gateway, never bolted on. Availability no single vendor can take down. Resilience through fewer moving parts, because every part is a part that can break. A solution that fails any of the three is not a solution. It is a liability with good marketing."
+    },
+    {
+      "name": "Every dependency is a decision.",
+      "body": "A library you import is someone else's code, someone else's exploits, someone else's outages, running inside your walls. Sometimes worth it. Usually not. If twenty lines you understand will do, write them: a function you understand always beats a dependency you do not."
+    },
+    {
+      "name": "Build it stateless. Build it to scale to zero.",
+      "body": "Instances are cattle, not pets. Swap one out and nothing notices. Stateless, portable, scale-to-zero: it runs on a laptop or any cloud, no warm-up choreography, no idle compute burning money and carbon while it waits for traffic that never came."
+    },
+    {
+      "name": "No shiny objects.",
+      "body": "New is not a feature. Proven, portable, and replaceable are features. A fifteen-year-old battle-tested tool beats a bleeding-edge one still looking for a problem. We are not impressed by novelty. We are impressed by uptime."
+    },
+    {
+      "name": "Modernization is baked in, not bolted on.",
+      "body": "Respect what works; replace what does not. Modernization is incremental and continuous, a habit rather than a project with a budget and a steering committee."
+    },
+    {
+      "name": "Document your schemas.",
+      "body": "A flat stack runs on predictable, consistent data objects. Document them so they get reused instead of rebuilt. A documented schema can move. An undocumented blob is an anchor."
+    },
+    {
+      "name": "Thank you; have a nice day.",
+      "body": "And go scale something down to zero."
+    }
+  ],
+
+  "closing": {
+    "heading": "How this becomes a daily column",
+    "body": "The doctrine above is the answer. This site exists to keep finding the questions.\n\nEvery morning a pipeline reads Hacker News, Google News, and a set of publisher feeds looking for one specific kind of event: something that went badly because of what it cost to run, or how much of it there was to run. Candidates have to clear two gates. They must be about computing infrastructure, and they must match one of eight story types. A large dollar figure or a busy comment thread is not enough on its own; those are boosters, not qualifiers. Everything that survives is read by a person before anything is written.\n\nThen the story gets rebuilt against the ten rules above, and the article says what the flat-stack version would have cost and what it would have given up. There is always something given up. An argument that pretends otherwise is marketing.\n\nWe do not publish anything that is not already public and linked. We name vendors, because a story about a bill is not a story without the name on the invoice, but the criticism is aimed at the architecture, and you get the original link to check our reading against."
+  },
+
+  "attribution": "This is the reader's edition of the engineering doctrine airbrx builds by. The original is [The Flat-Stack Manifesto](https://airbrx.ai/articles/flat-stack-manifesto.html); the argument for why a fifteen-year-old architecture is the current one is [here](https://www.michaelbissell.com/18b7345a-4272-4be0-81f0-c0cb3c5ad61d/Why-Am-I-Promoting-A-15-Year-Old-Architecture-Solution/)."
+}

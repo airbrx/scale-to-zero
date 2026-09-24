@@ -1,0 +1,159 @@
+{
+  "_doc": "Every source was probe-tested from a Windows box on 2026-09-03. `status: verified` means it returned 200 with parseable items. Sources that failed are recorded in `disabled` with the real reason -- we do not ship silent no-op collectors.",
+  "hnSearch": {
+    "type": "algolia",
+    "status": "verified",
+    "endpoint": "https://hn.algolia.com/api/v1/search_by_date",
+    "_doc": "Best single source. Free, no auth, and HN comment threads are where practitioners post real invoice numbers. Queries are wrapped in quotes and sent with advancedSyntax=true -- treat each entry as an EXACT PHRASE.",
+    "exactPhrase": true,
+    "minPoints": 5,
+    "queries": [
+      "cloud bill",
+      "cloud costs",
+      "aws bill",
+      "our aws bill",
+      "cut our bill",
+      "cut our cloud",
+      "cost overrun",
+      "egress fees",
+      "snowflake cost",
+      "databricks cost",
+      "datadog bill",
+      "bigquery costs",
+      "cost per query",
+      "infrastructure costs",
+      "hosting costs",
+      "saved us",
+      "leaving the cloud",
+      "left the cloud",
+      "cloud repatriation",
+      "bare metal",
+      "self-hosting",
+      "moved off",
+      "migrated away from",
+      "we deleted",
+      "we removed",
+      "shutting down",
+      "shut down our",
+      "ran out of money",
+      "could not afford",
+      "postmortem",
+      "root cause",
+      "incident report",
+      "gpu costs",
+      "inference costs",
+      "cost per token",
+      "data center",
+      "kubernetes complexity",
+      "replaced kubernetes",
+      "back to a monolith",
+      "over-engineered",
+      "too complex",
+      "simplified our"
+    ],
+    "lookbackDays": 60
+  },
+  "hnFrontPage": {
+    "type": "algolia",
+    "status": "verified",
+    "endpoint": "https://hn.algolia.com/api/v1/search",
+    "_doc": "High-engagement stories that our exact phrases would miss. Bare terms (exactPhrase:false) with a high points floor -- the crowd does the filtering, then the category gate does the rest.",
+    "exactPhrase": false,
+    "minPoints": 100,
+    "queries": [
+      "cloud costs",
+      "outage postmortem",
+      "infrastructure costs",
+      "self-hosting",
+      "kubernetes"
+    ],
+    "lookbackDays": 21
+  },
+  "googleNews": {
+    "type": "rss",
+    "status": "verified",
+    "_doc": "Wide net for mainstream/business coverage. HIGH NOISE -- returns vendor content marketing constantly. The penalty list in taxonomy.json exists because of this source. NOTE: without the `when:Nd` operator Google News happily returns 2024 archive material for niche queries; {days} is substituted from config.pipeline.lookbackDays. Heavily quoted phrase queries return almost nothing -- keep these broad and let the scorer filter.",
+    "template": "https://news.google.com/rss/search?q={q}+when:{days}d&hl=en-US&gl=US&ceid=US:en",
+    "queries": [
+      "cloud costs",
+      "cloud spending cuts",
+      "cloud repatriation",
+      "data center opposition",
+      "data center electricity rates",
+      "data center water",
+      "AI spending returns",
+      "AI capex",
+      "cloud outage",
+      "data breach cloud misconfiguration",
+      "software startup shuts down",
+      "IT cost cutting infrastructure"
+    ],
+    "lookbackDays": 10
+  },
+  "feeds": {
+    "type": "rss",
+    "status": "verified",
+    "_doc": "Direct publisher feeds. Lower noise than Google News, narrower coverage.",
+    "list": [
+      {
+        "name": "The Register",
+        "url": "https://www.theregister.com/headlines.atom"
+      },
+      {
+        "name": "DataCenter Dynamics",
+        "url": "https://www.datacenterdynamics.com/rss/"
+      },
+      {
+        "name": "Ars Technica",
+        "url": "https://feeds.arstechnica.com/arstechnica/technology-lab"
+      },
+      {
+        "name": "TechCrunch",
+        "url": "https://techcrunch.com/feed/"
+      },
+      {
+        "name": "The Verge",
+        "url": "https://www.theverge.com/rss/index.xml"
+      },
+      {
+        "name": "CNBC Tech",
+        "url": "https://www.cnbc.com/id/19854910/device/rss/rss.html"
+      },
+      {
+        "name": "WSJ Tech",
+        "url": "https://feeds.a.dj.com/rss/RSSWSJD.xml"
+      },
+      {
+        "name": "Lobsters",
+        "url": "https://lobste.rs/rss"
+      }
+    ],
+    "lookbackDays": 10
+  },
+  "disabled": {
+    "_doc": "Probed and failed. Listed so nobody re-adds them expecting results. Re-test with `node pipeline/harvest.mjs --probe`.",
+    "reddit": {
+      "reason": "HTTP 403 from www.reddit.com and 302 loop from old.reddit.com for scripted/datacenter IPs (probed 2026-09-03). Reddit now requires an OAuth app credential for JSON endpoints.",
+      "fix": "Register a Reddit app, add REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET to env, use https://oauth.reddit.com. Subreddits worth pulling: dataengineering, devops, aws, ExperiencedDevs, sysadmin, FinOps.",
+      "wouldHaveQueried": [
+        "r/dataengineering",
+        "r/devops",
+        "r/aws",
+        "r/ExperiencedDevs",
+        "r/sysadmin"
+      ]
+    },
+    "bluesky": {
+      "reason": "HTTP 403 from public.api.bsky.app/xrpc/app.bsky.feed.searchPosts (probed 2026-09-03). searchPosts now requires an authenticated session.",
+      "fix": "Create an app password at bsky.app settings, add BSKY_HANDLE / BSKY_APP_PASSWORD to env, call com.atproto.server.createSession then app.bsky.feed.searchPosts with the bearer token."
+    },
+    "x_twitter": {
+      "reason": "No free API tier for search since 2023.",
+      "fix": "None that is cheap or scale-to-zero. Skip."
+    },
+    "linkedin": {
+      "reason": "No public search API; scraping violates ToS.",
+      "fix": "None. Manual submission via the queue is the honest path."
+    }
+  }
+}

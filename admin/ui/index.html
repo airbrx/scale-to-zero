@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin - The Scale-to-Zero Report</title>
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/admin/admin.css">
+<!-- Vendored, not CDN-loaded. cdn.ckeditor.com had script-execution rights
+     inside the authenticated admin with no subresource integrity pinning the
+     bytes. Self-hosting removes a third party from this plane and lets the
+     admin CSP stay at script-src 'self'. The trade: we now own CKEditor's
+     security updates, which the CDN used to hand over silently.
+     Built from source by admin/editor -- the stock classic build carries no
+     CodeBlock. Rebuild it there; never hand-edit the bundle. -->
+<script src="/admin/ckeditor.js"></script>
+</head>
+<body>
+
+<header class="bar">
+  <span class="brand">Scale-to-Zero <em>admin</em></span>
+  <nav class="tabs" hidden id="tabs">
+    <button class="tab is-on" data-view="articles">Articles</button>
+    <button class="tab" data-view="stats">Stats</button>
+    <button class="tab" data-view="admins">Admins</button>
+    <button class="tab" data-view="publish">Publish</button>
+  </nav>
+  <span class="who" id="who" hidden>
+    <span id="whoEmail"></span>
+    <button class="link" id="signOut">sign out</button>
+  </span>
+</header>
+
+<main id="main">
+
+  <!-- signed out -->
+  <section class="view gate" id="gate">
+    <h1>Sign in</h1>
+    <p class="muted">Access is limited to addresses on the admin list. Signing in with
+      Google proves who you are; the server decides whether that address may edit.</p>
+    <div id="gbtn"></div>
+    <p class="err" id="gateErr" hidden></p>
+  </section>
+
+  <!-- articles -->
+  <section class="view" id="articlesView" hidden>
+    <div class="viewhead">
+      <h1>Articles</h1>
+      <button class="btn primary" id="newArticle">New article</button>
+    </div>
+    <ul class="list" id="articleList"></ul>
+  </section>
+
+  <!-- editor -->
+  <section class="view" id="editorView" hidden>
+    <div class="viewhead">
+      <h1 id="editorTitle">Edit</h1>
+      <div class="actions">
+        <span class="savestate" id="saveState"></span>
+        <button class="btn" id="backToList">Back</button>
+        <button class="btn primary" id="saveArticle">Save</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <label>Headline<input id="f-headline" placeholder="The claim, not the topic"></label>
+      <label>Dek<textarea id="f-dek" rows="2" placeholder="One sentence that explains the claim"></textarea></label>
+
+      <div class="row">
+        <label>Status
+          <select id="f-status"><option value="draft">draft</option><option value="published">published</option></select>
+        </label>
+        <label>Template
+          <select id="f-template"><option value="article">article</option><option value="podcast">audio / podcast</option></select>
+        </label>
+        <label>Date<input id="f-date" type="date"></label>
+      </div>
+
+      <div class="row">
+        <label>Category<select id="f-category"></select></label>
+        <label>Flat-stack angle<select id="f-angle"></select></label>
+      </div>
+
+      <!-- The body. One free-form editor; the five-section formula lives in
+           docs/EDITORIAL.md as guidance, not as scaffolding to fight. -->
+      <div class="bodywrap">
+        <div class="bodyhead">
+          <span class="lbl">Body</span>
+          <span class="wordcount" id="wordCount">0 words</span>
+          <button class="btn small" id="insertImage" type="button">Insert image</button>
+          <input type="file" id="f-imagefile" accept="image/*" hidden>
+        </div>
+        <div id="f-body"></div>
+      </div>
+
+      <fieldset id="audioFields" hidden>
+        <legend>Audio</legend>
+        <label>Upload<input type="file" id="f-audiofile" accept="audio/*"></label>
+        <label>URL<input id="f-audiourl" placeholder="/media/audio/..." readonly></label>
+        <p class="muted small" id="audioMeta"></p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Source</legend>
+        <label>Title<input id="f-src-title"></label>
+        <label>URL<input id="f-src-url" placeholder="https://..."></label>
+        <div class="row">
+          <label>Publisher<input id="f-src-pub"></label>
+          <label>Figure<input id="f-src-fig" placeholder="$12.9M"></label>
+        </div>
+        <label>Discussion URL<input id="f-src-disc" placeholder="optional"></label>
+      </fieldset>
+
+      <label>Pull quote<textarea id="f-pull" rows="2"></textarea></label>
+    </div>
+    <p class="err" id="editErr" hidden></p>
+  </section>
+
+  <!-- stats -->
+  <section class="view" id="statsView" hidden>
+    <div class="viewhead">
+      <h1>Stats</h1>
+      <div class="actions">
+        <select id="statsWindow">
+          <option value="7">last 7 days</option>
+          <option value="30" selected>last 30 days</option>
+          <option value="90">last 90 days</option>
+        </select>
+        <!-- Filled from the report's own list of processed dates, so it can
+             only ever offer a day that has numbers behind it. -->
+        <select id="statsDay" title="Scope every tab to a single day">
+          <option value="">every day in the window</option>
+        </select>
+        <button class="btn" id="refreshStats">Process new logs</button>
+        <button class="btn" id="rebuildStats" title="Re-read every log file still in the bucket and rebuild the report from scratch. Needed after the stats code learns a new dimension.">Rebuild</button>
+      </div>
+    </div>
+    <p class="muted small">Read from CloudFront access logs. No tracking script, no
+      cookies, no third party.</p>
+    <nav class="subtabs" id="statsTabs" hidden>
+      <button class="subtab is-on" data-stab="overview">Overview</button>
+      <button class="subtab" data-stab="audience">Audience</button>
+      <button class="subtab" data-stab="content">Content</button>
+      <button class="subtab" data-stab="geo">Geography</button>
+      <button class="subtab" data-stab="acquisition">Acquisition</button>
+      <button class="subtab" data-stab="bots">Bots</button>
+      <button class="subtab" data-stab="security">Security</button>
+      <button class="subtab" data-stab="days">Days</button>
+    </nav>
+    <div id="statsBody"><p class="muted">loading...</p></div>
+  </section>
+
+  <!-- admins -->
+  <section class="view" id="adminsView" hidden>
+    <div class="viewhead">
+      <h1>Admins</h1>
+      <button class="btn primary" id="saveAdmins">Save list</button>
+    </div>
+    <p class="muted">Authorization only. Anyone here still has to prove who they are
+      through Google; this list decides who is allowed once they have.</p>
+    <table class="tbl"><thead><tr><th>Email</th><th>Role</th><th>Name</th><th></th></tr></thead>
+      <tbody id="adminRows"></tbody></table>
+    <button class="btn" id="addAdmin">Add</button>
+    <p class="err" id="adminErr" hidden></p>
+    <p class="muted small">An owner can edit this list. The last owner cannot be removed,
+      and you cannot remove yourself.</p>
+  </section>
+
+  <!-- publish -->
+  <section class="view" id="publishView" hidden>
+    <div class="viewhead">
+      <h1>Publish</h1>
+      <button class="btn primary" id="doPublish">Publish to live</button>
+    </div>
+    <p class="muted">Staging is what you have been editing. Publishing copies the
+      changed files to the live bucket and invalidates the CDN.</p>
+    <div class="changeset" id="changeset">checking...</div>
+    <pre class="log" id="publishLog" hidden></pre>
+  </section>
+
+</main>
+
+<script type="module" src="/admin/app.js"></script>
+</body>
+</html>

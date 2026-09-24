@@ -1,0 +1,37 @@
+{
+  "site": {
+    "name": "The Scale-to-Zero Report",
+    "shortName": "STZ Report",
+    "tagline": "A daily autopsy of what compute cost somebody.",
+    "description": "Every day, somebody's architecture bills them for standing still. We read the news, find the wreckage, and rebuild it flat.",
+    "domain": "scale-to-zero.com",
+    "baseUrl": "https://scale-to-zero.com",
+    "author": "Michael Bissell",
+    "authorUrl": "https://www.michaelbissell.com/",
+    "org": "airbrx",
+    "orgUrl": "https://airbrx.ai",
+    "manifestoUrl": "https://airbrx.ai/articles/flat-stack-manifesto.html",
+    "originStoryUrl": "https://www.michaelbissell.com/18b7345a-4272-4be0-81f0-c0cb3c5ad61d/Why-Am-I-Promoting-A-15-Year-Old-Architecture-Solution/",
+    "locale": "en-US"
+  },
+  "deploy": {
+    "target": "s3+cloudfront",
+    "bucket": "scale-to-zero-com-site",
+    "distributionId": "E32TNRWB7DWW3Y",
+    "region": "us-west-2",
+    "stagingBucket": "scale-to-zero-com-site-staging",
+    "distributionDomain": "d2k9hi71ll6y62.cloudfront.net",
+    "functionName": "stz-admin",
+    "googleClientId": "776876158742-9v7p4jb1mes1u3a9ikvabpiedvsd9s5h.apps.googleusercontent.com",
+    "lambdaRegion": "us-east-1",
+    "logBucket": "scale-to-zero-com-site-logs",
+    "logRetentionDays": 30
+  },
+  "pipeline": {
+    "queueSize": 15,
+    "lookbackDays": 10,
+    "minScore": 20,
+    "userAgent": "scale-to-zero-report/0.1 (+https://scale-to-zero.com; research crawler)",
+    "maxPerCategory": 3
+  }
+}
