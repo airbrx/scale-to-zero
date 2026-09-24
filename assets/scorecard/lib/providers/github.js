@@ -1,8 +1,9 @@
 // GitHub, read anonymously.
 //
-// Two API calls per scan: the repo (for the default branch and activity) and
-// the recursive tree (every path and size in one response). File contents come
-// from raw.githubusercontent.com, which does not count against the 60/hour
+// Three API calls per scan: the repo (default branch, activity), the commit the
+// branch points at, and that commit's recursive tree (every path and size in
+// one response). File contents come from raw.githubusercontent.com at the same
+// commit, which does not count against the 60/hour
 // unauthenticated API limit. When that limit is hit, source.js falls back to
 // the jsDelivr mirror and says so on the scorecard.
 
@@ -46,23 +47,30 @@ export const github = {
     }
 
     const ref = target.ref ?? info.default_branch;
-    let tree;
+    // Resolve the branch to one commit and read everything at that commit.
+    // Reading raw files "at main" goes through a CDN that caches a branch for
+    // five minutes, so a scan right after a push could pair the new file list
+    // with old contents. A commit hash cannot go stale.
+    let commit;
     try {
-      tree = await http.json(`${base}/git/trees/${encodeURIComponent(ref)}?recursive=1`, { headers: HEADERS });
+      commit = await http.json(`${base}/commits/${encodeURIComponent(ref)}`, { headers: HEADERS });
     } catch (err) {
-      if (err.status === 404 || err.status === 409) {
+      if (err.status === 404 || err.status === 409 || err.status === 422) {
         throw new Error(`No branch, tag, or commit named "${ref}" in ${info.full_name} (or the repository is empty).`);
       }
       throw err;
     }
+    const at = commit.sha;
+    const tree = await http.json(`${base}/git/trees/${commit.commit.tree.sha}?recursive=1`, { headers: HEADERS });
 
     const repo = new Repo({
       http,
       scope: target.scope,
       truncated: Boolean(tree.truncated),
       files: tree.tree.filter((e) => e.type === "blob").map((e) => ({ path: e.path, size: e.size })),
-      readRaw: (path) => http.text(`https://raw.githubusercontent.com/${enc(info.full_name)}/${enc(ref)}/${enc(path)}`),
-      blobUrl: (path, line) => `${info.html_url}/blob/${enc(ref)}/${enc(path)}${line ? `#L${line}` : ""}`,
+      readRaw: (path) => http.text(`https://raw.githubusercontent.com/${enc(info.full_name)}/${at}/${enc(path)}`),
+      // Evidence links point at the commit graded, so they stay true after the branch moves.
+      blobUrl: (path, line) => `${info.html_url}/blob/${at}/${enc(path)}${line ? `#L${line}` : ""}`,
       meta: {
         provider: "github",
         source: "GitHub API",

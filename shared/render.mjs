@@ -304,7 +304,7 @@ export function scorecardHtml(site) {
     <h2>How it reads a repository</h2>
 ${para(`It runs where you are reading this. Your browser asks GitHub or GitLab for the file list, then fetches the handful of files the checks need: manifests, lockfiles, pages, entry points, infrastructure templates. Nothing is cloned, nothing is uploaded, and there is no account to sign in with. The repository sits in memory for one scan, and the finished scorecard is kept in this browser only, so a rescan of an unchanged repo is instant.
 
-GitHub allows 60 anonymous API requests an hour from each address, and a scan spends two. When they run out, the scorecard reads through the jsDelivr mirror instead and says so at the top of the result.
+GitHub allows 60 anonymous API requests an hour from each address, and a scan spends three. When they run out, the scorecard reads through the jsDelivr mirror instead and says so at the top of the result.
 
 The checks are grouped by language. Every repository gets the common ones: always-on infrastructure, committed secrets, tests, documentation. HTML pages and Node.js projects get their own on top. Each language is one self-contained file of checks, so adding the next one touches nothing else.`)}
   </section>

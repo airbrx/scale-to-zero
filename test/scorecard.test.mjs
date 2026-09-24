@@ -10,7 +10,7 @@ import { scoreRepo, gradeFor, ruleGradeFor } from "../assets/scorecard/lib/engin
 import { PRINCIPLES } from "../assets/scorecard/lib/principles.js";
 import { memoryRepo } from "../assets/scorecard/lib/providers/memory.js";
 import { composeServices } from "../assets/scorecard/lib/packs/common.js";
-import { countLock, packageOf } from "../assets/scorecard/lib/packs/node.js";
+import { countLock, packageOf, stripComments } from "../assets/scorecard/lib/packs/node.js";
 import { parsePage } from "../assets/scorecard/lib/packs/web.js";
 import { PACKS } from "../assets/scorecard/lib/packs/index.js";
 import { narrate } from "../assets/scorecard/lib/narrate/index.js";
@@ -204,6 +204,13 @@ t("csvapi: undeclared require is caught", status(csvapi, "node.lockfile"), "fail
 t("csvapi: undeclared names", csvapi.principles.flatMap((p) => p.checks).find((c) => c.id === "node.lockfile").data.undeclared, ["csv-parser"]);
 t("csvapi: raw http server stays up", status(csvapi, "node.entry-points"), "fail");
 t("csvapi: does not vouch for an undeclared version", narrate(csvapi).reasons.shiny.includes("floats"), true);
+const commented = await scoreRepo(memoryRepo({
+  "package.json": JSON.stringify({ name: "c" }),
+  "lib.js": `// require("x"), import ... from "x"\n/* app.listen(3000) and\n   import y from "y" */\nconst url = "https://example.com//x";\nexport const ok = 1;\n`,
+}, {}, http));
+t("imports in comments are not dependencies", status(commented, "node.lockfile"), "pass");
+t("listen() in a comment is not a server", status(commented, "node.entry-points"), "pass");
+t("comments blanked in place, line numbers kept", stripComments("a\n// b\nc").split("\n").length, 3);
 t("packageOf", ["fs/promises", "node:fs", "./x", "@scope/pkg/sub", "lodash/fp", "@/alias", "https://esm.sh/x", "#internal"].map(packageOf),
   [null, null, null, "@scope/pkg", "lodash", null, null, null]);
 

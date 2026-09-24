@@ -46,6 +46,19 @@ const BUILTINS = new Set(["assert", "async_hooks", "buffer", "child_process", "c
   "perf_hooks", "process", "punycode", "querystring", "readline", "repl", "stream", "string_decoder", "sys", "test", "timers",
   "tls", "trace_events", "tty", "url", "util", "v8", "vm", "wasi", "worker_threads", "zlib"]);
 
+/**
+ * Source with comments blanked out, so a comment that *documents* an import
+ * or a listen() call is not mistaken for one. Blanked, not removed: every
+ * character keeps its offset, so reported line numbers stay right. Only whole-
+ * line `//` comments are touched, which leaves "https://..." in strings alone.
+ */
+export function stripComments(text) {
+  const blank = (s) => s.replace(/[^\n]/g, " ");
+  return text
+    .replace(/\/\*[\s\S]*?\*\//g, blank)
+    .replace(/^[ \t]*\/\/.*$/gm, blank);
+}
+
 /** The npm package a specifier loads, or null for builtins, relative paths,
  *  URLs, and bundler aliases ("@/x", "~/x", "#x", "virtual:x"). */
 export function packageOf(spec) {
@@ -174,7 +187,8 @@ async function gather(repo) {
   const handlers = [];
   const timers = [];
   const imported = new Map();
-  for (const { path, text } of srcRead) {
+  for (const { path, text: raw } of srcRead) {
+    const text = stripComments(raw);
     const listens = [...text.matchAll(LISTEN)];
     for (const m of listens) listeners.push({ path, line: lineAt(text, m.index), note: lineOf(text, m.index) });
     for (const [re, what] of HANDLERS) {

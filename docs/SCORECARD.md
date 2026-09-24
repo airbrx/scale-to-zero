@@ -17,8 +17,8 @@ A browser can only read another host if that host sends
 
 | Endpoint | CORS | Used for |
 |---|---|---|
-| `api.github.com` (repo, recursive tree) | `*` | file list and sizes: **2 requests per scan**, 60/hour/IP anonymous |
-| `raw.githubusercontent.com` | `*` | file contents; not counted against the API limit |
+| `api.github.com` (repo, commit, recursive tree) | `*` | file list and sizes: **3 requests per scan**, 60/hour/IP anonymous |
+| `raw.githubusercontent.com` | `*` | file contents, read at the scanned commit; not counted against the API limit |
 | `data.jsdelivr.com` / `cdn.jsdelivr.net` | `*` | fallback mirror when the GitHub limit is used up |
 | `gitlab.com/api/v4` | `*` | project, commit, paginated tree, raw files |
 | `registry.npmjs.org/<pkg>/latest` | `*` | deprecation lookup for direct dependencies |
