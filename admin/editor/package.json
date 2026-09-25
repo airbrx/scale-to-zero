@@ -1,6 +1,7 @@
 {
   "name": "stz-editor-build",
   "private": true,
+  "license": "MIT",
   "description": "Builds admin/ui/ckeditor.js. See README.md in this directory.",
   "scripts": {
     "build": "webpack --mode production"

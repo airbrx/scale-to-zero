@@ -219,3 +219,16 @@ docs/SCORECARD.md        how the scorecard works, and adding a language
 ```
 
 `data/published.json` keeps used source URLs out of future queues automatically.
+
+## License
+
+[MIT](LICENSE), copyright airbrx. That covers the code and the articles in this
+repository: use them, adapt them, republish them, with the notice kept.
+
+Two pieces come from elsewhere under their own terms:
+
+- **Icons** in `assets/scorecard/icons.js` are from [Font Awesome Free](https://fontawesome.com),
+  licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- **The admin's editor** (`admin/editor`) builds against [CKEditor 5](https://ckeditor.com/ckeditor-5/),
+  licensed GPL-2.0-or-later. It is a dependency, not code in this repository; the
+  bundle it produces (`admin/ui/ckeditor.js`, not committed) is under CKEditor's license.
