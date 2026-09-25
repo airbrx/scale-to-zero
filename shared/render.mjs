@@ -64,7 +64,26 @@ export const fmtDuration = (sec) => {
 };
 
 // ------------------------------------------------------------------ chrome
-export function head(site, title, description, canonical, extra = "") {
+/**
+ * Open Graph and Twitter/X tags for a page's link preview. Crawlers need an
+ * absolute URL, and width/height/alt let them lay the card out without
+ * fetching the image first.
+ */
+function socialImageTags(image) {
+  if (!image) return "";
+  return `<meta property="og:image" content="${esc(image.url)}">
+<meta property="og:image:width" content="${image.width}">
+<meta property="og:image:height" content="${image.height}">
+<meta property="og:image:alt" content="${esc(image.alt)}">
+<meta name="twitter:image" content="${esc(image.url)}">
+<meta name="twitter:image:alt" content="${esc(image.alt)}">
+`;
+}
+
+/**
+ * @param {{url:string, width:number, height:number, alt:string}} [image]  link-preview image
+ */
+export function head(site, title, description, canonical, extra = "", image = null) {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -78,7 +97,7 @@ export function head(site, title, description, canonical, extra = "") {
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:url" content="${esc(canonical)}">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+${socialImageTags(image)}<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="alternate" type="application/rss+xml" title="${esc(site.name)}" href="/feed.xml">
 <link rel="stylesheet" href="/assets/style.css${site.assetVersion ? `?v=${esc(site.assetVersion)}` : ""}">
 ${extra}
@@ -336,8 +355,13 @@ ${foot(site)}`;
  */
 export function scorecardHtml(site) {
   const description = "Score any public GitHub or GitLab repository against the flat-stack manifesto. Runs in your browser; no account, no server.";
+  const image = {
+    url: `${site.baseUrl}/assets/scorecard-social.png`,
+    width: 1600, height: 900,
+    alt: "Flat-stack report cards for supabase, n8n, phaser, pixijs and hoppscotch, each graded A to F against the nine rules.",
+  };
   return `${head(site, `Flat-stack scorecard - ${site.shortName}`, description, `${site.baseUrl}/scorecard.html`,
-    '<script type="module" src="/assets/scorecard/app.js"></script>')}
+    '<script type="module" src="/assets/scorecard/app.js"></script>', image)}
 <main class="wrap scorecard">
   <section class="lede">
     <h1>How flat is your stack?</h1>

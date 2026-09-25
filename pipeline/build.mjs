@@ -88,6 +88,8 @@ await writeFile(
 
 await copyFile(path.join(ROOT, "assets", "style.css"), path.join(SITE, "assets", "style.css"));
 await copyFile(path.join(ROOT, "assets", "favicon.svg"), path.join(SITE, "assets", "favicon.svg"));
+// The scorecard page's link-preview image (og:image / twitter:image).
+await copyFile(path.join(ROOT, "assets", "scorecard-social.png"), path.join(SITE, "assets", "scorecard-social.png"));
 // Browsers request /favicon.ico regardless of the <link>, and an S3 origin
 // behind OAC answers a miss with 403, not 404 -- which shows up as a scary red
 // console line on every page load. Serving the same SVG at that path silences it.

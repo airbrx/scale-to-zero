@@ -365,5 +365,8 @@ t("scorecard page rendered", typeof files["scorecard.html"], "string");
 t("scorecard page loads the module", files["scorecard.html"].includes('<script type="module" src="/assets/scorecard/app.js">'), true);
 t("scorecard page has no inline script", /<script(?![^>]*\bsrc=)[^>]*>(?!\s*\{)/.test(files["scorecard.html"]), false);
 t("nav links the scorecard", files["index.html"].includes('href="/scorecard.html"'), true);
+t("scorecard page has a link-preview image", /<meta property="og:image" content="https:\/\/x\/assets\/scorecard-social\.png">/.test(files["scorecard.html"]), true);
+t("…for X/Twitter too, with alt text", /<meta name="twitter:image" content=[^>]+>\s*<meta name="twitter:image:alt" content="[^"]{20,}">/.test(files["scorecard.html"]), true);
+t("other pages have no stray image tags", files["index.html"].includes("og:image"), false);
 
 console.log(`ok - ${n} scorecard assertions`);
