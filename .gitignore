@@ -2,18 +2,22 @@ data/raw/
 .gstack/
 node_modules/
 
-# Generated from config.json by infra/deploy-admin-ui.mjs. Committing it would
+# Generated from .env by infra/deploy-admin-ui.mjs --local. Committing it would
 # put the Google client id in two places and let them drift.
 admin/ui/config.json
 
 # This repository is public. Kept local only:
-#   config.local.json   account-specific IDs written by infra/ (see infra/shared/local-config.mjs)
+#   .env                this deployment's buckets, distribution, Lambda and client id
+#                       (.env.example lists them; infra/ scripts write what they create)
 #   docs/HARDENING.md   the admin plane's open security work, until it is closed
 #   draft articles      unpublished pieces; add each new draft here until it ships
-config.local.json
+.env
 docs/HARDENING.md
 articles/2026-09-03-instantdb-is-shutting-down.json
 articles/2026-09-04-every-scanner-assumes-you-run-wordpress.json
+#   draft films: a film of an unpublished article, and its gallery entry
+stories/film-is-code/
+stories/manifest.local.json
 
 # Build output, regenerated from source:
 #   site/                  node pipeline/build.mjs
@@ -23,3 +27,13 @@ site/
 infra/lambda-build/
 infra/stz-admin.zip
 admin/ui/ckeditor.js
+
+# Stories: the check tool's fonts and stills are local, and so are voice takes
+# and their transcripts (only the encoded voiceover.m4a is committed).
+stories/**/*.wav
+stories/**/*.mp3
+stories/**/*.transcript.txt
+stories/tools/fonts/
+stories/tools/out/
+# the reader's copy of the films, built by stories/tools/publish.mjs
+stories/dist/

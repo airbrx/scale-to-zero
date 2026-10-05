@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../lib/theme.js"></script>
+<title>Probe All You Want</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="../lib/tokens.css">
+<link rel="stylesheet" href="../brand/tokens.css">
+<link rel="stylesheet" href="../lib/viewer.css">
+<link rel="stylesheet" href="../brand/viewer.css">
+</head>
+<body>
+<template id="info-content">
+  <h2>Probe All You Want</h2>
+  <p>Rewritten as a film from the Report's article of the same name. The 50 bots, the four list-type requests and the WordPress stack that scaled from 1 instance to 8 are the site's and the author's own. The probe paths are real shapes, but the stream of them on screen is illustrative. Every other figure is from the sources below.</p>
+  <ul>
+    <li><a href="https://scale-to-zero.com/2026-09-04-every-scanner-assumes-you-run-wordpress.html" target="_blank" rel="noopener">Probe all you want, there's no compute here...</a> · The Scale-to-Zero Report</li>
+    <li><a href="https://sites.cs.ucsb.edu/~chris/research/doc/eurosnp23_certvuln.pdf" target="_blank" rel="noopener">Certifiably Vulnerable: Using Certificate Transparency Logs for Target Reconnaissance</a> · EuroS&amp;P 2023</li>
+    <li><a href="https://www.greynoise.io/press/greynoise-releases-2026-state-of-the-edge-report" target="_blank" rel="noopener">2026 State of the Edge report</a> · GreyNoise</li>
+    <li><a href="https://unit42.paloaltonetworks.com/large-scale-cloud-extortion-operation/" target="_blank" rel="noopener">Leaked Environment Variables Allow Large-Scale Extortion Operation in Cloud Environments</a> · Unit 42, Palo Alto Networks</li>
+    <li><a href="https://w3techs.com/technologies/overview/content_management" target="_blank" rel="noopener">Usage statistics of content management systems</a> · W3Techs</li>
+  </ul>
+</template>
+<script type="module">
+  import { mountViewer } from '../lib/viewer.js';
+  import { BEATS, makeStory } from './story.js';
+  mountViewer({ slug: 'stz-every-scanner', title: 'Probe All You Want', BEATS, makeStory }).catch((e) => {
+    console.error(e);
+    const p = document.createElement('p');
+    p.className = 'err'; p.textContent = `The story could not start: ${e.message}`;
+    document.body.appendChild(p);
+  });
+</script>
+</body>
+</html>

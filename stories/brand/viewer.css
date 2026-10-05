@@ -1,0 +1,97 @@
+/* viewer.css - the story window in the Report's clothes, loaded after the
+   kit's lib/viewer.css: paper, ink, invoice red, hairline rules, square
+   corners, serif where it speaks.
+
+   Colours follow the stage tokens (brand/tokens.css), so the bar, the
+   overlays and the film always agree, light or dark. */
+
+/* --muted is both a stage token and the kit bar's grey, and the kit's viewer.css
+   overrides it. Restate the Report's values here; "--muted: var(--muted)" is a
+   cycle, which CSS treats as unset, and the film then reads an empty colour. */
+:root {
+  --orange: var(--accent); --orange-2: var(--accent); --grad: var(--accent);
+  --bg: var(--stage); --chrome: var(--stage); --line: var(--stage-line); --line-strong: var(--stage-grid);
+  --text: var(--stage-text); --strong: var(--stage-ink); --muted: #767d87; --hover: transparent; --ctl: var(--stage-card);
+  --seg: var(--stage-line); --seg-on: var(--stage-grid);
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+html.dark { --hover: transparent; --muted: #8d8983; }
+html, body { font-family: var(--sans); }
+/* the kit names Inter in a few shorthands; the Report loads no webfont, so say what it uses */
+kbd { font-family: var(--sans); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* the frame is a page on the desk, not a floating card */
+.frame16 { border-radius: 0; border: 1px solid var(--stage-line); box-shadow: none; }
+html.dark .frame16 { box-shadow: none; }
+.beatlabel { font: italic 400 clamp(11px, 1.15vw, 13px)/1 var(--serif); letter-spacing: 0; text-transform: none; }
+
+/* the caption: a strip of newsprint with torn ends (brand/captions.js burns
+   the same thing into a recording) */
+.caption {
+  font: 500 clamp(13px, 1.9vw, 26px)/1.32 var(--serif); letter-spacing: 0;
+  background: var(--stage-card); border: 0; border-radius: 0; box-shadow: none; padding: .38em 1.3em;
+  clip-path: polygon(1.2% 0, 98.8% 0, 99.6% 14%, 98.6% 31%, 100% 49%, 98.9% 66%, 99.7% 83%, 98.6% 100%, 1.3% 100%, .3% 84%, 1.4% 67%, 0 50%, 1.1% 33%, .2% 16%);
+}
+
+.bigplay { width: 76px; height: 76px; border-radius: 0; background: var(--stage-ink); color: var(--stage); box-shadow: none; }
+.bigplay:hover { transform: none; background: var(--accent); color: #fff; }
+
+/* the bar: a ruled strip under the page */
+.bar { background: var(--stage); border-top: 3px double var(--stage-line); }
+.brand { text-decoration: none; border-right: 1px solid var(--stage-line); font: 700 17px/1 var(--serif); letter-spacing: -.01em; color: var(--stage-ink); white-space: nowrap; }
+.brand .wm-the { font-style: italic; font-weight: 400; color: var(--stage-text); }
+.brand .wm-report { color: var(--accent); }
+.ctl { border-radius: 0; border: 1px solid var(--stage-grid); background: var(--stage-card); }
+.ctl:hover { border-color: var(--stage-ink); color: var(--stage-ink); background: var(--stage-card); }
+.ctl.pp { border-radius: 0; background: var(--stage-ink); color: var(--stage); box-shadow: none; }
+.ctl.pp:hover { background: var(--accent); color: #fff; }
+.beat .num { font: 500 11px/1 var(--mono); }
+.beat .num b { color: var(--accent); }
+.beat #btitle { font: italic 400 15px/1.2 var(--serif); }
+.segs i { border-radius: 0; }
+.fill { background: var(--stage-ink); border-radius: 0; }
+.fill::after { border-radius: 0; width: 4px; height: 18px; right: -2px; background: var(--accent); box-shadow: none; }
+.tip { border-radius: 0; background: var(--stage-ink); color: var(--stage); font: 500 12px var(--mono); }
+.time { font: 500 13px/1 var(--mono); }
+.btn { border-radius: 0; border: 1px solid var(--stage-grid); background: var(--stage-card); color: var(--stage-ink); font: 500 13px var(--sans); }
+.btn:hover { border-color: var(--stage-ink); color: var(--stage-ink); background: var(--stage-card); }
+.btn.on { border-color: var(--stage-ink); color: var(--stage-ink); }
+.btn.pri { background: var(--stage-ink); color: var(--stage); box-shadow: none; }
+.btn.pri:hover { background: var(--accent); color: #fff; filter: none; }
+#info { font-family: var(--serif); }
+
+/* the reader's copy (tools/publish.mjs): no studio controls */
+html.published #rec, html.published a[href="presenter.html"] { display: none; }
+
+/* the play tile and the sources: a sheet of paper over the desk */
+.ptile, .infobox, .ptile.xport { background: rgba(20, 22, 26, .45); }
+.pt-card, .info-card {
+  background: var(--stage-card); color: var(--stage-text); border: 1px solid var(--stage-line); border-radius: 0;
+  box-shadow: 6px 6px 0 rgba(20, 22, 26, .12); font: 15px/1.5 var(--sans);
+}
+.pt-k, .info-card h2 { font: italic 400 15px var(--serif); letter-spacing: 0; text-transform: none; color: var(--accent); }
+.pt-t { font: 700 28px/1.15 var(--serif); color: var(--stage-ink); }
+.pt-opt { background: var(--stage); border: 1px solid var(--stage-line); border-radius: 0; color: var(--stage-text); }
+.pt-opt b { color: var(--stage-ink); }
+.pt-opt.on { border-color: var(--stage-ink); background: var(--stage-card); box-shadow: inset 3px 0 0 var(--accent); }
+.pt-audio, .pt-sub, .pt-export, .xp-row { color: var(--muted); }
+.pt-load { background: var(--stage); border: 1px dashed var(--stage-grid); border-radius: 0; color: var(--stage-ink); }
+.pt-load:hover { border-color: var(--stage-ink); }
+.pt-check { color: var(--stage-text); }
+.pt-check input { accent-color: var(--accent); }
+.pt-num { background: var(--stage); border: 1px solid var(--stage-grid); border-radius: 0; color: var(--stage-ink); }
+.pt-go { font: 700 18px var(--serif); color: var(--stage-ink); }
+.pt-frame { background: var(--stage); border-radius: 0; color: var(--stage-text); }
+.pt-frame b { color: var(--stage-ink); }
+.pt-frame .ok { color: var(--ok); }
+.pt-frame .warn { color: var(--accent); }
+.ptile .btn, .infobox .btn { background: var(--stage-card); color: var(--stage-ink); border-color: var(--stage-grid); }
+.xp-view { border-radius: 0; border-color: var(--stage-line); }
+.xp-bar { border-radius: 0; background: var(--stage-line); }
+.xp-bar i { background: var(--stage-ink); }
+kbd { border-radius: 0; border-color: var(--stage-grid); color: var(--stage-ink); background: var(--stage); font: 500 12px/20px var(--mono); }
+.info-card a { color: var(--accent); }
+.err { border-radius: 0; }

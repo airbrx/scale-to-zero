@@ -20,29 +20,28 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { saveLocal } from "./shared/local-config.mjs";
+import { env, need, saveEnv } from "./shared/env.mjs";
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const CONFIG_PATH = path.join(ROOT, "config.json");
-const config = JSON.parse(await readFile(CONFIG_PATH, "utf8"));
 
 // Buckets stay where they are; the function moves. Every working Lambda in this
 // account is us-east-1, and a us-west-2 function URL with AuthType NONE returns
 // 403 no matter how the resource policy is written -- consistent with a
 // region-scoped org guardrail on public function URLs.
-const REGION = config.deploy.lambdaRegion ?? config.deploy.region;
-const BUCKET_REGION = config.deploy.region;
-const LIVE = config.deploy.bucket;
-const STAGING = config.deploy.stagingBucket;
-const DIST = config.deploy.distributionId;
+const BUCKET_REGION = need("BUCKET_REGION");
+const REGION = env("LAMBDA_REGION", BUCKET_REGION);
+const LIVE = need("LIVE_BUCKET");
+const STAGING = need("STAGING_BUCKET", "node infra/provision.mjs");
+const DIST = need("DISTRIBUTION_ID", "node infra/provision.mjs");
+const LOG_BUCKET = env("LOG_BUCKET", "");
 const FN = "stz-admin";
 const ROLE = "stz-admin-role";
 const ZIP = path.join(ROOT, "infra", "stz-admin.zip");
 
 const argv = process.argv.slice(2);
 const clientIdArg = argv.includes("--client-id") ? argv[argv.indexOf("--client-id") + 1] : null;
-const CLIENT_ID = clientIdArg ?? config.deploy.googleClientId ?? "";
+const CLIENT_ID = clientIdArg ?? env("GOOGLE_CLIENT_ID", "");
 
 async function aws(args, { region = REGION, allowFail = false } = {}) {
   try {
@@ -99,8 +98,8 @@ const inline = {
       Effect: "Allow",
       Action: ["s3:GetObject", "s3:ListBucket"],
       Resource: [
-        `arn:aws:s3:::${config.deploy.logBucket ?? "none"}`,
-        `arn:aws:s3:::${config.deploy.logBucket ?? "none"}/*`,
+        `arn:aws:s3:::${LOG_BUCKET || "none"}`,
+        `arn:aws:s3:::${LOG_BUCKET || "none"}/*`,
       ],
     },
     {
@@ -127,7 +126,7 @@ step(2, "Function");
 
 // The HMAC key for admin sessions. Generated once and then read back from the
 // live function config on every redeploy: regenerating it would silently sign
-// everyone out, and writing it to config.json would put a secret in the repo.
+// everyone out, and writing it anywhere on disk would put a secret one commit from the repo.
 const existingCfg = await aws(["lambda", "get-function-configuration", "--function-name", FN], { allowFail: true });
 const SESSION_SECRET = existingCfg?.Environment?.Variables?.SESSION_SECRET || randomBytes(32).toString("hex");
 log(existingCfg?.Environment?.Variables?.SESSION_SECRET
@@ -137,7 +136,7 @@ log(existingCfg?.Environment?.Variables?.SESSION_SECRET
 // The shared secret proving a request came through CloudFront. The distribution
 // config is the source of truth: infra/wire-cloudfront.mjs puts it on the
 // admin-lambda origin as a custom header, and it is read back here. It is
-// therefore never in the repo, never in config.json, and never typed at a shell.
+// therefore never in the repo, never in .env, and never typed at a shell.
 const distCfg = await aws(["cloudfront", "get-distribution-config", "--id", DIST],
   { region: "us-east-1", allowFail: true });
 const ORIGIN_SECRET = (distCfg?.DistributionConfig?.Origins?.Items ?? [])
@@ -162,13 +161,13 @@ if (ORIGIN_ENFORCE === "1" && !ORIGIN_SECRET) {
     "  Run: node infra/wire-cloudfront.mjs   (then wait for Deployed)");
 }
 
-const env = {
+const fnEnv = {
   Variables: {
     AWS_BUCKET_REGION: BUCKET_REGION,
     STAGING_BUCKET: STAGING,
     LIVE_BUCKET: LIVE,
     DISTRIBUTION_ID: DIST,
-    LOG_BUCKET: config.deploy.logBucket ?? "",
+    LOG_BUCKET,
     GOOGLE_CLIENT_ID: CLIENT_ID,
     SESSION_SECRET,
     ORIGIN_SECRET,
@@ -187,7 +186,7 @@ if (!existing) {
     "--timeout", "60",
     "--memory-size", "1024",       // sharp wants headroom; also buys faster CPU
     "--architectures", "x86_64",
-    "--environment", JSON.stringify(env)]);
+    "--environment", JSON.stringify(fnEnv)]);
   log(`created ${FN}`);
 } else {
   await aws(["lambda", "update-function-code", "--function-name", FN, "--zip-file", `fileb://${ZIP}`]);
@@ -195,7 +194,7 @@ if (!existing) {
   await execFileAsync("aws", ["lambda", "wait", "function-updated", "--function-name", FN, "--region", REGION]);
   await aws(["lambda", "update-function-configuration", "--function-name", FN,
     "--timeout", "60", "--memory-size", "1024",
-    "--environment", JSON.stringify(env)]);
+    "--environment", JSON.stringify(fnEnv)]);
   log(`updated ${FN}`);
 }
 await execFileAsync("aws", ["lambda", "wait", "function-updated", "--function-name", FN, "--region", REGION]);
@@ -227,10 +226,7 @@ await aws(["lambda", "add-permission", "--function-name", FN,
   "--function-url-auth-type", "NONE"], { allowFail: true });
 log("invoke permission in place");
 
-config.deploy.functionName = FN;
-console.log(`  function URL recorded in ${await saveLocal(ROOT, { functionUrl: fnUrl })}`);
-if (CLIENT_ID) config.deploy.googleClientId = CLIENT_ID;
-await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
+saveEnv({ FUNCTION_NAME: FN, FUNCTION_URL: fnUrl, ...(CLIENT_ID ? { GOOGLE_CLIENT_ID: CLIENT_ID } : {}) });
 
-console.log(`\nconfig.json updated`);
+console.log(`\n.env updated`);
 console.log(`next: node infra/wire-cloudfront.mjs   (route /api/* and /admin/* to the function)`);

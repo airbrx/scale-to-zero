@@ -1,8 +1,7 @@
 // A MaxMind DB (.mmdb) reader, in about two hundred lines and no dependencies.
 //
-// Why this exists rather than `npm i geoip-lite`, which is what
-// airbrx/signal/src/reporter/parsers.js uses: this repo has no node_modules on
-// purpose, and a publication that argues every dependency is a decision should
+// Why this exists rather than `npm i geoip-lite`: this repo has no
+// node_modules on purpose, and a publication that argues every dependency is a decision should
 // not import 150MB of someone else's code to answer "which city." The MMDB
 // format is a documented binary search tree plus a tagged data section. Reading
 // it is a day of work, and then it is ours.

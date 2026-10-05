@@ -20,20 +20,19 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { saveLocal } from "./shared/local-config.mjs";
+import { env, need, saveEnv } from "./shared/env.mjs";
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const CONFIG_PATH = path.join(ROOT, "config.json");
-const config = JSON.parse(await readFile(CONFIG_PATH, "utf8"));
+const config = JSON.parse(await readFile(path.join(ROOT, "config.json"), "utf8"));
 
 const STATUS_ONLY = process.argv.includes("--status");
 
 const DOMAIN = config.site.domain;
 const WWW = `www.${DOMAIN}`;
-const REGION = config.deploy.region;
-const LIVE_BUCKET = config.deploy.bucket;
-const STAGING_BUCKET = config.deploy.stagingBucket ?? `${LIVE_BUCKET}-staging`;
+const REGION = need("BUCKET_REGION");
+const LIVE_BUCKET = need("LIVE_BUCKET");
+const STAGING_BUCKET = env("STAGING_BUCKET", `${LIVE_BUCKET}-staging`);
 
 // ----------------------------------------------------------------- aws helper
 async function aws(args, { region = REGION, allowFail = false } = {}) {
@@ -301,14 +300,12 @@ step(5, "DNS aliases");
 await ensureAliases(zoneId, dist?.DomainName);
 
 if (!STATUS_ONLY) {
-  config.deploy.stagingBucket = STAGING_BUCKET;
-  if (certArn) log(`  recorded in ${await saveLocal(ROOT, { certificateArn: certArn })}`);
-  if (dist) {
-    config.deploy.distributionId = dist.Id;
-    config.deploy.distributionDomain = dist.DomainName;
-  }
-  await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
-  log(`\nconfig.json updated`);
+  saveEnv({
+    STAGING_BUCKET,
+    ...(certArn ? { CERTIFICATE_ARN: certArn } : {}),
+    ...(dist ? { DISTRIBUTION_ID: dist.Id, DISTRIBUTION_DOMAIN: dist.DomainName } : {}),
+  });
+  log(`\n.env updated`);
 }
 
 log(`\n${dist ? `live at https://${DOMAIN} once the distribution deploys (~5-10 min)` : "re-run once the certificate is ISSUED to create the distribution"}`);

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../lib/theme.js"></script>
+<title>How We Make These</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="../lib/tokens.css">
+<link rel="stylesheet" href="../brand/tokens.css">
+<link rel="stylesheet" href="../lib/viewer.css">
+<link rel="stylesheet" href="../brand/viewer.css">
+</head>
+<body>
+<template id="info-content">
+  <h2>How We Make These</h2>
+  <p>A short film about how the Report's films are made, made the same way and in the same material. Every film is a place folded out of paper: here one page becomes a street at night in fog, a mill on someone else's river and a whole city, then folds back to the page. Then the storytelling moves, shown rather than told: the receipt, one thing we follow, the receipts and the phone at the edges, the turn, telling it twice, the honest caveat, and an emptier last frame. The method is written up in <code>stories/STYLE.md</code>; the worked examples are <em>Probe All You Want</em> and <em>GitHub Didn't Break Today</em>.</p>
+  <p>The ten rules in the cold open are the manifesto's own, word for word (The Flat Stack, "The Southern Cross"). The application they rebuild, and the phone's feed, are illustrative.</p>
+  <ul>
+    <li><a href="https://scale-to-zero.com/2026-09-04-every-scanner-assumes-you-run-wordpress.html" target="_blank" rel="noopener">Probe all you want, there's no compute here...</a> · The Scale-to-Zero Report</li>
+    <li><a href="https://scale-to-zero.com/2026-09-03-github-didnt-break-its-model-vendor-did.html" target="_blank" rel="noopener">GitHub Didn't Break Today. Its Model Vendor Did.</a> · The Scale-to-Zero Report</li>
+    <li><a href="https://scale-to-zero.com/2026-09-24-the-agent-only-knows-one-direction-up.html" target="_blank" rel="noopener">The Agent Only Knows One Direction: Up</a> · The Scale-to-Zero Report</li>
+  </ul>
+</template>
+<script type="module">
+  import { mountViewer } from '../lib/viewer.js';
+  import { BEATS, makeStory } from './story.js';
+  mountViewer({ slug: 'stz-how-we-make-these', title: 'How We Make These', BEATS, makeStory }).catch((e) => {
+    console.error(e);
+    const p = document.createElement('p');
+    p.className = 'err'; p.textContent = `The story could not start: ${e.message}`;
+    document.body.appendChild(p);
+  });
+</script>
+</body>
+</html>

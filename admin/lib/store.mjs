@@ -17,7 +17,8 @@ import { CloudFrontClient, CreateInvalidationCommand } from "@aws-sdk/client-clo
 
 // The buckets are not necessarily in the function's region: the function lives
 // in us-east-1 with the rest of the account's Lambdas, the buckets in us-west-2.
-const REGION = process.env.AWS_BUCKET_REGION ?? process.env.AWS_REGION ?? "us-west-2";
+// AWS_BUCKET_REGION on the Lambda; BUCKET_REGION in a local .env.
+const REGION = process.env.AWS_BUCKET_REGION ?? process.env.BUCKET_REGION ?? process.env.AWS_REGION ?? "us-west-2";
 export const STAGING = process.env.STAGING_BUCKET;
 export const LIVE = process.env.LIVE_BUCKET;
 export const DISTRIBUTION_ID = process.env.DISTRIBUTION_ID;

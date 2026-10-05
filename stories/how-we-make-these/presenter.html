@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../lib/theme.js"></script>
+<title>How We Make These · Presenter</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="../lib/tokens.css">
+<link rel="stylesheet" href="../brand/tokens.css">
+<link rel="stylesheet" href="../lib/presenter.css">
+<link rel="stylesheet" href="../brand/presenter.css">
+</head>
+<body>
+<script type="module">
+  import { mountPresenter } from '../lib/presenter.js';
+  import { BEATS, makeStory } from './story.js';
+  mountPresenter({ slug: 'stz-how-we-make-these', title: 'How We Make These', BEATS, makeStory }).catch((e) => {
+    console.error(e);
+    const p = document.createElement('p');
+    p.style.cssText = 'padding:24px;color:#fca5a5;font:16px Inter,sans-serif';
+    p.textContent = `The presenter could not start: ${e.message}`;
+    document.body.appendChild(p);
+  });
+</script>
+</body>
+</html>

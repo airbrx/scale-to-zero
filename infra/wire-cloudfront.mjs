@@ -3,8 +3,7 @@
 //
 //   node infra/wire-cloudfront.mjs
 //
-// This follows the pattern every other airbrx distribution already uses, which
-// is worth stating because the "more secure looking" alternative does not work:
+// Worth stating, because the "more secure looking" alternative does not work:
 //
 //   Lambda function URL origins are PLAIN CUSTOM ORIGINS with AuthType NONE.
 //   They do NOT use Origin Access Control.
@@ -13,10 +12,9 @@
 // that is correct. For Lambda function URLs it was tried (AuthType AWS_IAM +
 // an OAC of type "lambda", resource policy scoped to this distribution's ARN)
 // and every request came back 403 AccessDeniedException from the function URL,
-// even though a SigV4 request signed by an IAM user succeeded. Rather than keep
-// guessing, this now mirrors snowflake-cost-analysis (E1DQ63MYKEVP3C), which
-// works: same CachingDisabled policy, same AllViewerExceptHostHeader policy,
-// same https-only custom origin, no OAC.
+// even though a SigV4 request signed by an IAM user succeeded. What works is
+// the CachingDisabled policy, the AllViewerExceptHostHeader policy, and an
+// https-only custom origin with no OAC.
 //
 // The trade-off, stated plainly: the function URL is publicly reachable. That is
 // acceptable ONLY because the Lambda authenticates every /api request itself --
@@ -32,19 +30,19 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { env, need } from "./shared/env.mjs";
 
 const execFileAsync = promisify(execFile);
 const DRY = process.argv.includes("--dry-run");
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const CONFIG_PATH = path.join(ROOT, "config.json");
-const config = JSON.parse(await readFile(CONFIG_PATH, "utf8"));
+const config = JSON.parse(await readFile(path.join(ROOT, "config.json"), "utf8"));
 
 // The function lives in lambdaRegion (us-east-1), which is NOT the bucket
 // region. Reading the function URL from the bucket region points the origin
 // at a function that does not exist there.
-const REGION = config.deploy.lambdaRegion ?? config.deploy.region;
-const DIST = config.deploy.distributionId;
-const FN = config.deploy.functionName ?? "stz-admin";
+const REGION = env("LAMBDA_REGION", need("BUCKET_REGION"));
+const DIST = need("DISTRIBUTION_ID", "node infra/provision.mjs");
+const FN = env("FUNCTION_NAME", "stz-admin");
 
 // AWS managed policy ids, stable across accounts. Same pair the working
 // snowflake-cost-analysis distribution uses for its /api/* behavior.
@@ -148,7 +146,7 @@ const LAMBDA_ORIGIN_ID = "admin-lambda";
 // The distribution config IS the source of truth for it -- deliberately. It is
 // readable with get-distribution-config, so deploy-lambda.mjs can fetch it and
 // hand the same value to the function, and it never has to live in the repo,
-// in config.json, or in anyone's shell history.
+// in .env, or in anyone's shell history.
 //
 // Reused if already present so re-running this script does not silently rotate
 // the secret out from under a Lambda that is still enforcing the old one.
@@ -291,8 +289,6 @@ await aws(["cloudfront", "update-distribution", "--id", DIST,
   "--if-match", etag, "--distribution-config", JSON.stringify(cfg)], { region: "us-east-1" });
 log(`/admin* -> ${S3_ORIGIN_ID} (cached, rewritten at the edge), /api/* -> ${LAMBDA_ORIGIN_ID}`);
 
-delete config.deploy.lambdaOacId;
-await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
 
 console.log(`\nCloudFront takes ~5-10 min to redeploy, then:`);
 console.log(`  https://${config.site.domain}/admin/`);

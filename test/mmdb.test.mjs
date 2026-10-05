@@ -73,13 +73,9 @@ check("GeoLookup.none", () => {
 });
 
 // ------------------------------------------------------------- real database
-const scratch = process.env.TEMP
-  ? `${process.env.TEMP}/claude/C--Users-okell-airbrx-scale-to-zero-report`
-  : null;
 const candidates = [
   process.argv[2],
   "admin/data/dbip-city-lite.mmdb",
-  scratch && `${scratch}/319a1358-e07a-4ffd-a066-4a3172c5095a/scratchpad/dbip.mmdb`,
 ].filter(Boolean);
 const dbPath = candidates.find((p) => existsSync(p));
 

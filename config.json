@@ -8,19 +8,6 @@
     "baseUrl": "https://scale-to-zero.com",
     "locale": "en-US"
   },
-  "deploy": {
-    "target": "s3+cloudfront",
-    "bucket": "scale-to-zero-com-site",
-    "distributionId": "E32TNRWB7DWW3Y",
-    "region": "us-west-2",
-    "stagingBucket": "scale-to-zero-com-site-staging",
-    "distributionDomain": "d2k9hi71ll6y62.cloudfront.net",
-    "functionName": "stz-admin",
-    "googleClientId": "776876158742-9v7p4jb1mes1u3a9ikvabpiedvsd9s5h.apps.googleusercontent.com",
-    "lambdaRegion": "us-east-1",
-    "logBucket": "scale-to-zero-com-site-logs",
-    "logRetentionDays": 30
-  },
   "pipeline": {
     "queueSize": 15,
     "lookbackDays": 10,

@@ -1,9 +1,7 @@
 // Turns CloudFront access logs into daily reports.
 //
-// Structure follows an earlier project's log processor (incremental, metadata
-// tracks which objects are already folded in). The dimensions and the session
-// model come from airbrx/signal/src/reporter/index.js, which is a far more
-// complete treatment: visits rather than raw hits, bounce rate, channel
+// Incremental: metadata tracks which log objects are already folded in. The
+// reports count visits rather than raw hits, with bounce rate, channel
 // attribution, named bots with the paths they crawled, campaign parameters,
 // city-level geography, and an hour-by-hour breakdown.
 //
@@ -36,8 +34,8 @@
 //
 // On addresses: this file used to collapse every IP to a count before writing,
 // and said so loudly. That rule was relaxed deliberately. Reports now retain a
-// bounded top-N of client and scanner addresses with their geography, the way
-// signal's reporter does, because the scanner table is the raw material for
+// bounded top-N of client and scanner addresses with their geography,
+// because the scanner table is the raw material for
 // half of what this publication writes about. Session fingerprints are still
 // never written -- those exist only inside a run.
 

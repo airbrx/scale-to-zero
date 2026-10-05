@@ -23,16 +23,14 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { env, need, saveEnv } from "./shared/env.mjs";
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const CONFIG_PATH = path.join(ROOT, "config.json");
-const config = JSON.parse(await readFile(CONFIG_PATH, "utf8"));
-
-const DIST = config.deploy.distributionId;
-const REGION = config.deploy.region;
+const DIST = need("DISTRIBUTION_ID", "node infra/provision.mjs");
+const REGION = need("BUCKET_REGION");
 const STATUS_ONLY = process.argv.includes("--status");
-const LOG_BUCKET = config.deploy.logBucket ?? `${config.deploy.bucket}-logs`;
+const LOG_BUCKET = env("LOG_BUCKET", `${need("LIVE_BUCKET")}-logs`);
 const RETAIN_DAYS = 30;
 
 async function aws(args, { region = "us-east-1", allowFail = false } = {}) {
@@ -140,10 +138,8 @@ if (already) {
   log("delivery created");
 }
 
-config.deploy.logBucket = LOG_BUCKET;
-config.deploy.logRetentionDays = RETAIN_DAYS;
-await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
+saveEnv({ LOG_BUCKET, LOG_RETENTION_DAYS: RETAIN_DAYS });
 
-console.log(`\nconfig.json updated`);
+console.log(`\n.env updated`);
 console.log(`Logs begin arriving in s3://${LOG_BUCKET}/ within ~10-15 minutes.`);
 console.log(`The admin Stats tab processes them incrementally on demand.`);

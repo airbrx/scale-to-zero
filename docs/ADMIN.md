@@ -7,7 +7,8 @@ actually editing, so the management plane scales to zero along with the site.
 ```
 browser ──► CloudFront ──┬── /*        ──► S3 live bucket        (OAC, read-only)
                          ├── /api/*    ──► Lambda Function URL   (plain custom origin)
-                         └── /admin*   ──► same Lambda, serves the editor UI
+                         └── /admin*   ──► S3 live bucket, admin/ (the editor UI,
+                                            static, rewritten at the edge)
 
 Lambda ──► S3 staging  (drafts, media, admins.json, _internal/*)
        ──► S3 live     (publish = server-side copy)
@@ -34,8 +35,7 @@ Google Cloud console, not AWS.
 node infra/deploy-lambda.mjs --client-id 1234-abc.apps.googleusercontent.com
 ```
 
-The client ID is **not a secret** — it is public by design, exactly like the one
-in `signal/website/crm/config.js`. There is no client secret anywhere in this
+The client ID is **not a secret** — it is public by design. There is no client secret anywhere in this
 system, because there is no server-side OAuth exchange: the browser gets an ID
 token and the Lambda verifies its signature.
 
@@ -54,16 +54,16 @@ Two separate things, and conflating them is how admin panels get walked into:
 The email is only ever read from the *verified* token payload. No route anywhere
 trusts an email out of a request body.
 
-This is deliberately different from `signal/website/crm/auth.js`, which this was
-adapted from. That page requests a Google **access token** for the Sheets API and
-lets Google enforce who may touch the sheet — its own comments note the email it
-displays is cosmetic. There is no equivalent gatekeeper in front of an S3 bucket,
-so verification has to happen server-side, before any write.
+Why an ID token rather than an access token: a page that only touches a Google
+Sheet can request an **access token** and let Google enforce who may use the
+sheet, treating the email it displays as cosmetic. There is no equivalent
+gatekeeper in front of an S3 bucket, so verification has to happen server-side,
+before any write.
 
 Three properties worth keeping:
 
-- **An empty or missing admin list denies everyone.** The basic-auth helper this was
-  adapted from returns `true` when no credentials are configured, which is convenient locally
+- **An empty or missing admin list denies everyone.** The common shortcut is to
+  allow everything when no credentials are configured, which is convenient locally
   and catastrophic if config ever fails to load in production. This one throws.
 - **`admins.json` never gets published.** It lives only in staging, and `publish`
   skips it explicitly. Putting it on the live site would publish everyone's email.
@@ -105,7 +105,7 @@ Details that matter:
   logout.
 - **`SESSION_SECRET` is read back from the live function config on redeploy.**
   Regenerating it would sign everyone out on every deploy; writing it to
-  `config.json` would put a secret in the repo. It exists only as a Lambda
+  a file would put a secret one commit from the repo. It exists only as a Lambda
   environment variable.
 
 Work in the editor is additionally mirrored to `localStorage` every five seconds
@@ -163,15 +163,17 @@ a browser or this laptop), deletes what staging no longer has, and invalidates t
 CDN. Under ~15 changed paths it invalidates precisely; past that it uses `/*`,
 because only the first 1000 paths per month are free.
 
-`admin/*`, `admins.json`, `sitedata.json`, `media/*` and `_internal/*` are never
-published. The local `pipeline/deploy.mjs` excludes the same prefixes from its
-`--delete` sync: omitting `_internal/*` there once wiped the entire article store
-the admin reads from, leaving the rendered site up and its source gone.
+`admin/*`, `admins.json`, `sitedata.json` and `_internal/*` are never published;
+`media/*` is, since articles show its images. The local `pipeline/deploy.mjs`
+excludes every admin-owned prefix from its `--delete` syncs: omitting `_internal/*`
+there once wiped the entire article store the admin reads from, leaving the
+rendered site up and its source gone.
 
 ## Writing
 
-The body is one free-form CKEditor 5 instance (41.3.1, from the CDN), stored as
-HTML. The five-section formula in `docs/EDITORIAL.md` is now guidance for how a
+The body is one free-form CKEditor 5 instance, stored as HTML. The editor is a
+bundle built from `admin/editor` (see its README) and served with the admin, not
+loaded from a CDN. The five-section formula in `docs/EDITORIAL.md` is now guidance for how a
 piece should think, not scaffolding you have to type into. Rewrite freely.
 
 The toolbar carries headings, bold/italic, links, block quotes, code, lists,
@@ -191,10 +193,9 @@ An article written before the switch still has `sections`. Opening it folds thos
 into HTML so it edits as prose; saving drops the old field. The renderer still
 handles `sections` for anything not yet re-saved, so nothing published breaks.
 
-Stored HTML is sanitized at render time — script, iframe, object, embed, form,
-link, meta and base tags, `on*` handlers, and `javascript:` URLs are stripped.
-Admins are trusted, but a compromised admin session should not be able to plant
-something every reader then executes.
+Stored HTML is sanitized at render time, so nothing in an article body can run
+script in a reader's browser. Admins are trusted, but a compromised admin session
+should not be able to plant something every reader then executes.
 
 ## Stats
 
@@ -228,9 +229,6 @@ megabytes, and re-reading and re-writing all of it on every processing run is
 fine right up until it is the entire Lambda budget.
 
 ### The tabs
-
-Modelled on `airbrx/signal/src/reporter/index.js`, which is a far more complete
-treatment than the single summary page this started as.
 
 | Tab | What is in it |
 |---|---|
@@ -278,7 +276,7 @@ being linked with a tag nobody here chose.
 
 City, region and coordinates come from an IP lookup against a MaxMind-format
 database. `admin/lib/mmdb.mjs` is a ~250-line reader for the `.mmdb` container,
-written rather than imported: signal uses `geoip-lite`, and a publication whose
+written rather than imported (`geoip-lite` is the usual answer): a publication whose
 fifth rule is *every dependency is a decision* should not pull in 150MB of
 someone else's code to answer "which city".
 
@@ -291,8 +289,8 @@ DB-IP publishes City Lite monthly under **CC BY 4.0** with no account, which is
 why it is the default rather than MaxMind's GeoLite2 (same format, but needs a
 license key, so "run one command" is impossible). The attribution to db-ip.com on
 the Geography tab is a licence condition — leave it there. A GeoLite2 file can be
-dropped in with `--fetch-geodb --file`; the reader does not care which it is
-handed.
+dropped in with `node infra/fetch-geodb.mjs --file <file.mmdb.gz>`; the reader does
+not care which it is handed.
 
 The database lives in the staging bucket, not the deployment package: 127MB
 unpacked would be twelve times the size of the whole Lambda, it changes monthly
@@ -305,8 +303,6 @@ Two accuracy notes worth repeating to anyone reading the numbers: free city
 databases are approximate, so treat a city as a neighbourhood-sized guess; and
 country still comes from CloudFront's own `c-country` where it is present,
 because that is better than an IP database.
-
-### Reprocessing
 
 ### It runs itself, twice a day
 
@@ -327,6 +323,8 @@ invocation. Each run logs one JSON line (`processed`, `batches`, `truncated`,
 keeps taking 300-file batches until it has caught up or nears the timeout, so a
 backlog clears in one run, whether scheduled or clicked.
 
+### Reprocessing
+
 `POST /api/stats` is incremental. `POST /api/stats?force=1` — the **Rebuild**
 button — clears the processed set and re-reads every log object still in the
 bucket. That is needed whenever `stats.mjs` learns a new dimension: days already
@@ -343,7 +341,7 @@ node infra/rebuild-stats.mjs             # rebuild and upload
 
 ### What the numbers mean
 
-Four things worth understanding before quoting any of them:
+Five things worth understanding before quoting any of them:
 
 - **The admin plane is checked first, and separately.** Editing an article is not
   23 people visiting. This check used to sit *below* the probe check, which
@@ -384,11 +382,27 @@ overstated.
 If you would rather have the old rule back, it is the `accumulateIp` calls in
 `admin/lib/stats.mjs` and the `ips` block in `sealDay`.
 
+## Films
+
+An article can carry a film from `stories/`. Each push to main that touches
+`stories/` runs `.github/workflows/films.yml`: it builds every film that has a
+voice and syncs it to `films/` in the staging bucket, with `films/manifest.json`
+listing them. CI reaches the bucket through an IAM role assumed with GitHub's
+OIDC provider, allowed to write only under `films/` in staging
+(`node infra/films-ci.mjs` creates it and sets the repository variables).
+
+`GET /api/films` reads that manifest, and the editor's **Film** picker attaches
+one to the article (`film: { slug, title, durationSeconds }`). The page then
+shows an HTML card that plays the film in place when pressed. Publishing
+copies `films/` to live with everything else, so a film goes live with the
+first publish after CI has synced it. `pipeline/deploy.mjs` leaves `films/`
+alone in both buckets.
+
 ## Templates
 
-`templateType` on an article picks the layout, following a pattern from an earlier project:
+`templateType` on an article picks the layout:
 
-- `article` — the five-section format
+- `article` — a free-form prose body
 - `podcast` — adds a plain `<audio>` element and an enclosure in `/podcast.xml`
 
 `podcast.xml` is only written when at least one published article has audio, so
@@ -407,22 +421,30 @@ Gallery is not built.
 ## Local development
 
 ```bash
-STZ_LOCAL=1 \
-STAGING_BUCKET=scale-to-zero-com-site-staging \
-LIVE_BUCKET=scale-to-zero-com-site \
-DISTRIBUTION_ID=E32TNRWB7DWW3Y \
-GOOGLE_CLIENT_ID=<id> \
-node admin/server.mjs
+cd admin
+npm install        # once: the AWS SDK and sharp, the same packages the Lambda bundle carries
+npm run dev        # builds the films, then serves everything on http://localhost:8080
 ```
 
-Same router, same auth, real buckets. There is no offline mode and no auth bypass;
-a dev backdoor in an admin is a production backdoor that happens to be documented.
+One server: the editor at `/admin/`, the API at `/api/`, the pages the admin
+renders (read back from the staging bucket, so a saved article can be opened as
+`/<slug>.html` before it is published), and `/films/` from the local build. The
+Film picker lists that local build too, so a film can be attached and played
+before it is pushed. `admin/local.mjs` loads the repository's `.env`, turns on
+local mode and makes a `SESSION_SECRET` for the run (a sign-in lasts until the
+server stops); `PORT` changes the port. Sign-in needs `http://localhost:8080`
+among the OAuth client's authorized JavaScript origins.
+
+Same router, same auth, real buckets: saving writes staging, as the deployed
+admin does. There is no offline mode and no auth bypass; a dev backdoor in an
+admin is a production backdoor that happens to be documented.
 
 ## Rebuilding and redeploying
 
 ```bash
-bash infra/build-lambda.sh        # ~10.6MB zip, forces the linux-x64 sharp binary
+node infra/build-lambda.mjs       # ~10.6MB zip, forces the linux-x64 sharp binary (--fresh: clean install)
 node infra/deploy-lambda.mjs      # push code + config
+node infra/deploy-admin-ui.mjs    # the editor UI (admin/ui/) to the live bucket's admin/
 node infra/wire-cloudfront.mjs    # only needed if routing changes
 ```
 
@@ -432,23 +454,23 @@ missing rather than shipping a bundle that crashes on cold start.
 
 ## Why not the Lambda Web Adapter
 
-The project this was adapted from runs its server behind the Web Adapter layer with `run.sh` as the handler.
+The usual way to put a Node server on Lambda is behind the Web Adapter layer.
 This one exports a native Function URL handler instead: the routing is small, it is
 one fewer cross-account layer to depend on, and cold starts are quicker. Every
 dependency is a decision, including our own.
 
-## Why the Function URL is IAM-authenticated
+## How the Function URL is reached
 
-The first attempt used `AuthType: NONE`, which returned 403 on every request. The
-cause was an Organization SCP on this account blocking public Lambda Function URLs.
+CloudFront routes `/api/*` to the Function URL as a plain custom origin, with no
+Origin Access Control: OAC with a Lambda origin was tried and refused every
+request. The Function URL is therefore reachable directly, and that is acceptable
+because network reachability was never the control. Every `/api` route
+authenticates its caller itself: a Google ID token verified against Google's
+keys, then the email checked against `admins.json`. CloudFront also adds an
+origin header the Lambda can be set to require (`infra/set-origin-enforce.mjs`).
 
-IAM auth plus a CloudFront OAC is the better answer anyway: CloudFront signs each
-origin request with SigV4, and the Function URL rejects anything unsigned. The
-admin plane has exactly one reachable front door.
-
-Note the origin request policy is **AllViewerExceptHostHeader**. The Function URL
-validates the SigV4 signature against its own hostname, so forwarding the viewer's
-`Host` breaks every signed request.
+The origin request policy is **AllViewerExceptHostHeader**: forwarding the
+viewer's `Host` header to a Function URL breaks it.
 
 ## Costs
 

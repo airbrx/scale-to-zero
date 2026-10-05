@@ -31,23 +31,24 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import os from "node:os";
+import { env } from "./shared/env.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const config = JSON.parse(await readFile(path.join(ROOT, "config.json"), "utf8"));
-const { bucket: LIVE, distributionId, region, googleClientId } = config.deploy;
+const LIVE = env("LIVE_BUCKET"), distributionId = env("DISTRIBUTION_ID"), region = env("BUCKET_REGION"), googleClientId = env("GOOGLE_CLIENT_ID");
 
 const DRY = process.argv.includes("--dry-run");
 // The UI reads /admin/config.json for the Google client id. In production that
 // file is generated into the upload staging dir below and never touches the
 // repo. Local dev serves admin/ui straight off disk, so it needs a real copy
-// there -- gitignored, because config.json is the source of truth and a second
+// there -- gitignored, because .env is the source of truth and a second
 // committed copy would drift from it.
 const LOCAL = process.argv.includes("--local");
 
 const missing = Object.entries({ LIVE, distributionId, googleClientId })
   .filter(([, v]) => !v || String(v).includes("REPLACE-ME"));
 if (missing.length) {
-  console.error("FATAL: deploy target is not configured. Run: node infra/provision.mjs");
+  console.error("FATAL: deploy target is not configured: set these in .env (see .env.example), or run: node infra/provision.mjs");
   for (const [k, v] of missing) console.error(`  ${k} = ${JSON.stringify(v)}`);
   process.exit(1);
 }

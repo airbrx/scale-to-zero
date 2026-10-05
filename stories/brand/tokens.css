@@ -1,0 +1,48 @@
+/* tokens.css - the stage in the Report's own colours.
+
+   Loaded after the kit's lib/tokens.css, so it wins. Same token names, so
+   every drawing in the kit reads these without knowing it.
+
+   The values are assets/style.css's: paper ground, ink type, a hairline
+   rule, invoice red and flat-stack green. In the kit, --accent is "us" (the
+   eyebrows, the card rule, the headline figures); in the Report that is
+   invoice red, the masthead's colour, the colour of somebody's bill. --stop
+   is the same red: the wreckage is the Report's subject, not its enemy.
+   --ok is flat-stack green, the resolution. --water stays blue for anything
+   that has to be neither. The glow is off: the Report's paper is plain. */
+:root {
+  --stage: #f7f6f3;
+  --stage-card: #ffffff;
+  --stage-panel: #efede8;
+  --stage-ink: #14161a;
+  --stage-text: #4a5058;
+  --stage-grid: #c4bfb5;
+  --stage-line: #ddd9d1;
+  --muted: #767d87;
+  --accent: #b3341f;
+  --accent-2: #cf4a32;
+  --accent-text: #b3341f;
+  --glow: rgba(179, 52, 31, 0);
+  --ok: #1b6b57;
+  --stop: #b3341f;
+  --water: #3b6e8f;
+  --coin: #b8892a;
+}
+html.dark {
+  --stage: #14151a;
+  --stage-card: #1c1e24;
+  --stage-panel: #23252c;
+  --stage-ink: #e9e6e0;
+  --stage-text: #c4c0b8;
+  --stage-grid: #4a4d55;
+  --stage-line: #2f323a;
+  --muted: #8d8983;
+  --accent: #ef6a4f;
+  --accent-2: #f2836b;
+  --accent-text: #ef6a4f;
+  --glow: rgba(239, 106, 79, 0);
+  --ok: #4fbf9c;
+  --stop: #ef6a4f;
+  --water: #7db0cc;
+  --coin: #d9b45a;
+}

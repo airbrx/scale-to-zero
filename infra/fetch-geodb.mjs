@@ -29,19 +29,14 @@ import path from "node:path";
 import os from "node:os";
 
 import { MMDBReader } from "../admin/lib/mmdb.mjs";
+import { need } from "./shared/env.mjs";
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const config = JSON.parse(await readFile(path.join(ROOT, "config.json"), "utf8"));
-
-const STAGING = config.deploy.stagingBucket;
-const REGION = config.deploy.region;
+const STAGING = need("STAGING_BUCKET", "node infra/provision.mjs");
+const REGION = need("BUCKET_REGION");
 const KEY = "_internal/geo/dbip-city-lite.mmdb.gz";
 
-if (!STAGING || STAGING.includes("REPLACE-ME")) {
-  console.error("FATAL: no staging bucket in config.json. Run: node infra/provision.mjs");
-  process.exit(1);
-}
 
 const argv = process.argv.slice(2);
 const arg = (name) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] : null);

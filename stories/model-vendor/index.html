@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../lib/theme.js"></script>
+<title>GitHub Didn't Break Today</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="../lib/tokens.css">
+<link rel="stylesheet" href="../brand/tokens.css">
+<link rel="stylesheet" href="../lib/viewer.css">
+<link rel="stylesheet" href="../brand/viewer.css">
+</head>
+<body>
+<template id="info-content">
+  <h2>GitHub Didn't Break Today</h2>
+  <p>Rewritten as a film from the Report's article of the same name. The 174 minutes, the 50 incidents in seven weeks and the 12 that cite an upstream model provider are from GitHub's public status feed; the 177 minutes are from Anthropic's status page. On the seven-week line, nine of the twelve upstream incidents sit on their dates; the other three, and the other 38 incidents, are placed for illustration. The machine is a picture of the architecture, not a diagram of GitHub's: its own services are stations on its own conveyor, and each model in Copilot is a belt driven through a shaft by its provider's engine outside the wall. When the three engines stop in the wide shot is illustrative. The airbrx gateway is the author's own.</p>
+  <ul>
+    <li><a href="https://scale-to-zero.com/2026-09-03-github-didnt-break-its-model-vendor-did.html" target="_blank" rel="noopener">GitHub Didn't Break Today. Its Model Vendor Did.</a> · The Scale-to-Zero Report</li>
+    <li><a href="https://stspg.io/p217h6l54208" target="_blank" rel="noopener">Incident with Grok Copilot AI Model Provider</a> · GitHub Status</li>
+    <li><a href="https://www.githubstatus.com/history" target="_blank" rel="noopener">Incident history</a> · GitHub Status</li>
+    <li><a href="https://status.anthropic.com/history" target="_blank" rel="noopener">Incident history</a> · Anthropic Status</li>
+  </ul>
+</template>
+<script type="module">
+  import { mountViewer } from '../lib/viewer.js';
+  import { BEATS, makeStory } from './story.js';
+  mountViewer({ slug: 'stz-model-vendor', title: "GitHub Didn't Break Today", BEATS, makeStory }).catch((e) => {
+    console.error(e);
+    const p = document.createElement('p');
+    p.className = 'err'; p.textContent = `The story could not start: ${e.message}`;
+    document.body.appendChild(p);
+  });
+</script>
+</body>
+</html>

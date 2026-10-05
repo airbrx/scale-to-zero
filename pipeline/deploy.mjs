@@ -15,10 +15,11 @@ import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { env } from "../infra/shared/env.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const config = JSON.parse(await readFile(path.join(ROOT, "config.json"), "utf8"));
-const { bucket: LIVE, stagingBucket: STAGING, distributionId, region } = config.deploy;
+const LIVE = env("LIVE_BUCKET"), STAGING = env("STAGING_BUCKET"), distributionId = env("DISTRIBUTION_ID"), region = env("BUCKET_REGION");
 
 const DRY = process.argv.includes("--dry-run");
 const STAGE_ONLY = process.argv.includes("--stage-only");
@@ -26,7 +27,7 @@ const STAGE_ONLY = process.argv.includes("--stage-only");
 const missing = Object.entries({ LIVE, STAGING, distributionId })
   .filter(([, v]) => !v || String(v).includes("REPLACE-ME"));
 if (missing.length) {
-  console.error("FATAL: deploy target is not configured. Run: node infra/provision.mjs");
+  console.error("FATAL: deploy target is not configured: set these in .env (see .env.example), or run: node infra/provision.mjs");
   for (const [k, v] of missing) console.error(`  ${k} = ${JSON.stringify(v)}`);
   process.exit(1);
 }
@@ -68,6 +69,7 @@ await run("aws", ["s3", "sync", path.join(site, "assets"), `s3://${STAGING}/asse
   "--region", region, "--cache-control", CACHE_CONTROL,
   "--exclude", "*", "--include", "*.js", "--content-type", "text/javascript; charset=utf-8"]);
 
+// films/ belongs to CI (.github/workflows/films.yml), media/ and the rest to the admin.
 // --delete removes anything in staging that is not in the local build, so every
 // admin-owned prefix MUST be excluded. Missing "_internal/*" here once deleted
 // the entire article store the admin edits from -- the rendered site survived,
@@ -78,7 +80,9 @@ await run("aws", ["s3", "sync", site, `s3://${STAGING}`,
   "--exclude", "admin/*",
   "--exclude", "admins.json",
   "--exclude", "_internal/*",
+  "--exclude", "sitedata.json",
   "--exclude", "media/*",
+  "--exclude", "films/*",
   "--cache-control", CACHE_CONTROL]);
 
 if (STAGE_ONLY) {
@@ -91,6 +95,8 @@ await run("aws", ["s3", "sync", `s3://${STAGING}`, `s3://${LIVE}`,
   "--region", region, "--delete",
   "--exclude", "admin/*",
   "--exclude", "admins.json",
+  "--exclude", "sitedata.json",
+  "--exclude", "films/*",
   "--exclude", "_internal/*"]);
 
 // 3. Invalidate. Wildcard is one path against the monthly free allowance,

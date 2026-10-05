@@ -1,0 +1,11 @@
+{
+  "name": "stz-stories-tools",
+  "private": true,
+  "description": "Run npm install here before using the tools; nothing is installed by default. Tools for looking at and listening to a story without a browser. @napi-rs/canvas renders stills (check.mjs --stills, crop.mjs). tone and node-web-audio-api render the score offline (check.mjs --audio, sectiontest.mjs) with the same code the MP4 export runs. The stories themselves need nothing installed.",
+  "type": "module",
+  "dependencies": {
+    "@napi-rs/canvas": "1.0.10",
+    "node-web-audio-api": "^2.2.0",
+    "tone": "^14.8.49"
+  }
+}

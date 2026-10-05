@@ -26,7 +26,12 @@ Two halves:
    full-stack / always-on compute, scores it against an editorial rubric, and hands
    you a short ranked queue to choose from.
 2. **A static publication** that runs on the architecture it argues for: pre-rendered
-   HTML on object storage behind a CDN. No server, no database, no runtime.
+   HTML on object storage behind a CDN. No server, no database, no runtime behind
+   what readers see. Editing happens in an admin that is a Lambda, running only
+   while somebody edits (`docs/ADMIN.md`).
+
+Some articles come with **a film**: a narrated, animated explainer drawn live in
+the reader's browser from its script, not a video file. See `stories/README.md`.
 
 The pipeline is itself scale-to-zero. It is a set of scripts that run when you run
 them and cost nothing the rest of the day.
@@ -51,9 +56,18 @@ Or the whole morning in one command:
 node pipeline/daily.mjs
 ```
 
-No dependencies. Node 18+ and `curl`. There is no `node_modules`, and that is
-deliberate — a publication that complains about unnecessary dependencies should not
-have 400 of them.
+The pipeline and the public site have no dependencies: Node 18+ (20.12+ for the
+deploy scripts, which read `.env` natively) and `curl`, no
+`node_modules`. That is deliberate — a publication that complains about unnecessary
+dependencies should not have 400 of them.
+
+Three toolchains do have dependencies, each for a reason, and none of them ship to
+readers:
+
+- `admin/` — the AWS SDK and `sharp`, for S3 and image resizing in the Lambda.
+- `admin/editor/` — CKEditor 5 and webpack, built once into the editor bundle.
+- `stories/tools/` — a canvas, Tone.js and Web Audio for checking films without a
+  browser; Python with `faster-whisper`, and `ffmpeg`, for timing a recorded voice.
 
 ---
 
@@ -176,7 +190,7 @@ step (creating the Google OAuth client).
 ## The scorecard
 
 Live at `/scorecard.html`. Paste a public GitHub or GitLab repo and it is graded
-against the nine flat-stack principles, entirely in the reader's browser: no
+against the nine flat-stack principles (the manifesto's Southern Cross), entirely in the reader's browser: no
 server, no account, no clone. `node tools/scorecard.mjs <repo>` runs the same
 checks from a terminal. See `docs/SCORECARD.md` for how it reads repos over
 CORS and how to add a language.
@@ -190,29 +204,55 @@ node pipeline/deploy.mjs
 ```
 
 `site/` is the deployable artifact: static HTML, one stylesheet, no JavaScript
-required to read anything. Set `deploy.bucket` and `deploy.distributionId` in
-`config.json` first.
+required to read an article. `deploy.mjs` needs `LIVE_BUCKET`, `STAGING_BUCKET`,
+`DISTRIBUTION_ID` and `BUCKET_REGION` in `.env`; it syncs the build to staging,
+then staging to live.
+
+## Configuration
+
+Two files, split by whose they are:
+
+- **`config.json`** (committed): the publication itself (its name, domain and
+  tagline) and the pipeline's thresholds. The build and the admin render from it.
+- **`.env`** (gitignored): this deployment. Bucket names, the CloudFront
+  distribution, the admin Lambda, the Google client id. `.env.example` lists every
+  value; the `infra/` scripts write what they create into `.env` as they go, and CI
+  sets the same names as variables. Node reads it natively (20.12 or later), so
+  there is still nothing to install.
+
+Articles are normally published through the admin (`docs/ADMIN.md`), which keeps
+them in the staging bucket. `deploy.mjs` syncs with `--delete`, so run it only when
+the local `articles/` holds every article: otherwise it removes the ones that live
+only in the admin.
 
 ---
 
 ## Layout
 
 ```
-config.json              site identity, deploy target, pipeline thresholds
+config.json              site identity and pipeline thresholds
+.env.example             the deployment's values, for a gitignored .env
 pipeline/
   sources.json           where to look (and what is blocked, and why)
   taxonomy.json          THE EDITORIAL RUBRIC -- categories, gates, penalties
   harvest.mjs            fetch  -> data/raw/<date>.json
   score.mjs              score  -> data/queue.json
-  queue.mjs              review -> articles/<slug>.json
+  queue.mjs              review -> articles/<date>-<slug>.json
   build.mjs              render -> site/
   deploy.mjs             ship   -> S3 + CloudFront
   daily.mjs              harvest + score + queue in one command
   lib/                   curl wrapper, RSS parser, scorer
-articles/                one JSON per article, drafts and published
+articles/                one JSON per article (unpublished drafts are gitignored)
+content/                 the manifesto and other non-article page content
+shared/                  the renderer and schema checks, shared by the build and the admin
 site/                    generated -- deployable as-is
 data/                    harvests, queue, published archive
+admin/                   the admin Lambda, its editor UI, and the editor bundle's source
+infra/                   provisioning and deploy scripts for AWS
+stories/                 the films: kit, brand, tools, and one folder per film
+test/                    node test/<name>.test.mjs
 docs/EDITORIAL.md        house style and the article formula
+docs/ADMIN.md            the admin: auth, publishing, stats
 assets/scorecard/        the repo scorecard: ES modules, no build step
 tools/scorecard.mjs      the scorecard from a terminal
 docs/SCORECARD.md        how the scorecard works, and adding a language
@@ -232,3 +272,5 @@ Two pieces come from elsewhere under their own terms:
 - **The admin's editor** (`admin/editor`) builds against [CKEditor 5](https://ckeditor.com/ckeditor-5/),
   licensed GPL-2.0-or-later. It is a dependency, not code in this repository; the
   bundle it produces (`admin/ui/ckeditor.js`, not committed) is under CKEditor's license.
+- **Tone.js** (`stories/vendor/`), which plays the films' scores, is
+  [MIT](https://github.com/Tonejs/Tone.js), with its licence beside it.

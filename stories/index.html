@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="lib/theme.js"></script>
+<script>
+  // the site's stylesheet keys dark mode off data-theme; the films off html.dark.
+  // One choice (lib/theme.js) drives both, so the cards match their thumbnails.
+  document.documentElement.dataset.theme = window.storyTheme.get();
+</script>
+<title>Report Films</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  /* The studio shelf: the Report's front page, with films for articles.
+     Local only, never deployed, and self-contained: it's served from
+     stories/, so it carries the few site styles it uses (assets/style.css)
+     and links only within this folder. */
+  :root {
+    --ink: #14161a; --ink-soft: #4a5058; --ink-faint: #767d87; --paper: #f7f6f3; --card: #ffffff; --rule: #ddd9d1;
+    --accent: #b3341f; --accent-2: #1b6b57; --measure: 34rem;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --ink: #e9e6e0; --ink-soft: #a8a49c; --ink-faint: #7d7973; --paper: #14151a; --card: #1c1e24; --rule: #2f323a; --accent: #ef6a4f; --accent-2: #4fbf9c; }
+  }
+  :root[data-theme="dark"] { --ink: #e9e6e0; --ink-soft: #a8a49c; --ink-faint: #7d7973; --paper: #14151a; --card: #1c1e24; --rule: #2f323a; --accent: #ef6a4f; --accent-2: #4fbf9c; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 17px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; }
+  .masthead { border-bottom: 3px double var(--rule); padding: 2.2rem 1.5rem 1.1rem; text-align: center; }
+  .wordmark { display: inline-block; font-family: var(--serif); font-size: clamp(1.9rem, 6vw, 3.1rem); font-weight: 700; letter-spacing: -0.02em; text-decoration: none; line-height: 1.05; }
+  .wordmark-the { font-style: italic; font-weight: 400; color: var(--ink-soft); }
+  .wordmark-report { color: var(--accent); }
+  .masthead-tag { margin: .5rem 0 0; font-family: var(--mono); font-size: .72rem; text-transform: uppercase; letter-spacing: .13em; color: var(--ink-faint); }
+  .masthead-community { margin: .35rem 0 0; font-family: var(--serif); font-style: italic; font-size: .9rem; color: var(--ink-soft); }
+  .masthead-nav { margin-top: 1.1rem; display: flex; gap: 1.4rem; justify-content: center; flex-wrap: wrap; font-family: var(--mono); font-size: .74rem; text-transform: uppercase; letter-spacing: .09em; }
+  .masthead-nav a { color: var(--ink-soft); text-decoration: none; padding-bottom: 2px; }
+  .masthead-nav a:hover { color: var(--accent); border-bottom: 1px solid var(--accent); }
+  .footer { border-top: 3px double var(--rule); margin-top: 3.5rem; padding: 2rem 1.5rem 3rem; text-align: center; }
+  .footer-thesis { font-family: var(--serif); font-size: 1.05rem; color: var(--ink-soft); max-width: 34rem; margin: 0 auto 1.2rem; }
+  .footer-meta { font-family: var(--mono); font-size: .7rem; color: var(--ink-faint); max-width: 38rem; margin: 0 auto .6rem; line-height: 1.7; }
+
+  .shelf-wrap { max-width: 72rem; margin: 0 auto; padding: 2.4rem 1.5rem 1rem; }
+  .shelf-lede { max-width: 46rem; margin: 0 auto 2.4rem; padding-bottom: 2rem; border-bottom: 1px solid var(--rule); text-align: center; }
+  .shelf-lede h1 { font-family: var(--serif); font-size: clamp(1.6rem, 4.4vw, 2.3rem); line-height: 1.2; font-weight: 700; letter-spacing: -0.015em; margin: 1.1rem 0 .8rem; }
+  .shelf-lede h1 em { color: var(--accent); font-style: normal; }
+  .shelf-lede p { margin: 0 auto; color: var(--ink-soft); max-width: var(--measure); }
+  .mark { display: block; margin: 0 auto; width: 132px; height: 44px; }
+
+  .shelf { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 2.2rem 1.8rem; }
+  .film { display: flex; flex-direction: column; min-width: 0; }
+  .film-thumb { position: relative; display: block; aspect-ratio: 16 / 9; background: var(--card); border: 1px solid var(--rule); overflow: hidden; }
+  .film-thumb iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; pointer-events: none; }
+  .film-thumb:hover, .film-thumb:focus-visible { border-color: var(--accent); outline: none; }
+  .film-body { padding: .9rem 0 0; display: flex; flex-direction: column; gap: .35rem; }
+  .film-kicker { display: flex; gap: .7rem; flex-wrap: wrap; align-items: baseline; font-family: var(--mono); font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-faint); }
+  .film-status { color: var(--accent); }
+  .film-title { font-family: var(--serif); font-size: 1.45rem; line-height: 1.22; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+  .film-title a { text-decoration: none; }
+  .film-title a:hover { color: var(--accent); }
+  .film-desc { margin: 0; color: var(--ink-soft); font-size: .95rem; }
+  .film-re { margin: .15rem 0 0; font-family: var(--serif); font-style: italic; font-size: .9rem; color: var(--ink-faint); }
+  .film-re a { color: var(--ink-soft); text-underline-offset: 2px; }
+  .film-links { display: flex; gap: 1rem; margin-top: .3rem; font-family: var(--mono); font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; }
+  .film-links a { color: var(--ink-soft); text-decoration: none; border-bottom: 1px solid var(--rule); }
+  .film-links a:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* the lead film runs across the page, picture left, words right */
+  @media (min-width: 900px) {
+    .film.lead { grid-column: 1 / -1; display: grid; grid-template-columns: 1.6fr 1fr; gap: 1.8rem; align-items: center; padding-bottom: 2.2rem; border-bottom: 1px solid var(--rule); }
+    .film.lead .film-body { padding: 0; }
+    .film.lead .film-title { font-size: 2rem; }
+    .film.lead .film-desc { font-size: 1.02rem; }
+  }
+  .theme-btn { background: none; border: 0; padding: 0 0 2px; font: inherit; color: var(--ink-soft); cursor: pointer; text-transform: inherit; letter-spacing: inherit; }
+  .theme-btn:hover { color: var(--accent); border-bottom: 1px solid var(--accent); }
+  .err { color: var(--accent); text-align: center; padding: 2rem; font-family: var(--serif); }
+</style>
+</head>
+<body>
+<header class="masthead">
+  <a class="wordmark" href="index.html"><span class="wordmark-the">The</span> Scale-to-Zero <span class="wordmark-report">Report</span></a>
+  <p class="masthead-tag">A daily autopsy of what compute cost somebody.</p>
+  <p class="masthead-community">A community project of airbrx</p>
+  <nav class="masthead-nav">
+    <a href="doc.html?doc=style">Style guide</a>
+    <a href="doc.html?doc=built">How they're built</a>
+    <button class="theme-btn" id="theme" type="button"></button>
+  </nav>
+</header>
+
+<main class="shelf-wrap">
+  <section class="shelf-lede">
+    <!-- the films' own material: a house folded up out of the page, and one folded flat -->
+    <svg class="mark" viewBox="0 0 132 44" aria-hidden="true">
+      <g id="mark"></g>
+    </svg>
+    <h1>The Report, <em>in motion</em></h1>
+    <p>Each film retells one article: the receipt, the case, the turn, and the same world rebuilt flat. Narrated, scored, and drawn live from its script.</p>
+  </section>
+  <ol class="shelf" id="shelf"></ol>
+</main>
+
+<footer class="footer">
+  <p class="footer-thesis">Use as close to nothing as possible. Almost no running computers, almost no moving parts.</p>
+  <p class="footer-meta">The studio shelf. Local only, not deployed. Films play in the browser and export to MP4 from the play tile (press p in a film).</p>
+</footer>
+
+<script>
+  (async () => {
+    const shelf = document.getElementById('shelf');
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const day = (d) => new Date(`${d}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+    const length = (m) => (m < 1 ? `${Math.round(m * 60)} sec` : `about ${Math.round(m * 10) / 10} min`);
+
+    // the theme switch: one key for the shelf and every film in it
+    const btn = document.getElementById('theme');
+    const label = () => { btn.textContent = window.storyTheme.get() === 'dark' ? 'Light' : 'Dark'; };
+    label();
+    btn.addEventListener('click', () => {
+      document.documentElement.dataset.theme = window.storyTheme.toggle();
+      label();
+      // the thumbnails follow by themselves: lib/theme.js listens for the storage event
+    });
+
+    // the mark: a house folded up out of the page (red roofline, a cut door), and the same house folded flat
+    const mark = document.getElementById('mark');
+    const poly = (pts, fill, op = 1) => `<polygon points="${pts}" fill="${fill}" opacity="${op}"/>`;
+    mark.innerHTML = [
+      poly('30,40 30,22 44,10 58,22 58,40', 'var(--card)'),
+      poly('28,23 44,9 60,23 58,25 44,13 30,25', 'var(--accent)'),
+      poly('40,40 40,29 48,29 48,40', 'var(--paper)'),
+      poly('40,40 40,29 35,31 35,41', 'var(--ink-faint)', .5),
+      poly('74,40 82,36 106,36 98,40', 'var(--ink-faint)', .35),
+      poly('82,36 88,33 112,33 106,36', 'var(--ink-faint)', .22),
+      '<rect x="18" y="40" width="96" height="2" fill="var(--rule)"/>',
+    ].join('');
+
+    try {
+      const res = await fetch(`manifest.json?r=${Date.now()}`);
+      if (!res.ok) throw new Error(`manifest.json: HTTP ${res.status}`);
+      const { stories } = await res.json();
+      // manifest.local.json (gitignored): films of articles not yet published, listed first
+      const loc = await fetch(`manifest.local.json?r=${Date.now()}`);
+      if (loc.ok) stories.unshift(...(await loc.json()).stories);
+      else if (loc.status !== 404) throw new Error(`manifest.local.json: HTTP ${loc.status}`);
+      if (!stories.length) throw new Error('manifest.json lists no films');
+      shelf.innerHTML = stories.map((s, i) => `
+        <li class="film${i === 0 ? ' lead' : ''}">
+          <a class="film-thumb" href="${s.slug}/index.html" aria-label="Play ${esc(s.title)}">
+            <iframe src="${s.slug}/index.html?embed&t=${s.thumbT || 0}" scrolling="no" tabindex="-1" loading="lazy" title="${esc(s.title)}"></iframe>
+          </a>
+          <div class="film-body">
+            <div class="film-kicker"><span>${esc(day(s.date))}</span>${s.minutes ? `<span>${esc(length(s.minutes))}</span>` : ''}${s.status ? `<span class="film-status">${esc(s.status)}</span>` : ''}</div>
+            <h2 class="film-title"><a href="${s.slug}/index.html">${esc(s.title)}</a></h2>
+            <p class="film-desc">${esc(s.description)}</p>
+            ${s.articleTitle ? `<p class="film-re">re: ${esc(s.articleTitle)}</p>` : ''}
+            <div class="film-links"><a href="${s.slug}/index.html">Play</a><a href="${s.slug}/presenter.html">Presenter</a><a href="${s.slug}/script.md">Script</a></div>
+          </div>
+        </li>`).join('');
+    } catch (e) {
+      console.error(e);
+      shelf.innerHTML = `<li class="err">The films could not load: ${esc(e.message)}</li>`;
+    }
+  })();
+</script>
+</body>
+</html>

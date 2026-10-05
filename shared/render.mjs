@@ -202,6 +202,30 @@ const SANITIZE = [
   [/(href|src|action)\s*=\s*("|')?\s*javascript:[^"'\s>]*("|')?/gi, ""],
 ];
 
+// A film (stories/), attached in the admin. The article carries only this card
+// and a small loader (/films/lib/card.js); pressing play loads the film from
+// /films/<slug>/ and plays it in the card's place. Nothing of the film
+// downloads until then, and the page itself needs no script to be read.
+function filmBlock(a) {
+  const f = a.film;
+  if (!f?.slug) return "";
+  const len = fmtDuration(f.durationSeconds);
+  return `  <figure class="stz-film" data-film="/films/${esc(f.slug)}/">
+    <div class="stz-film-stage">
+      <div class="stz-film-face">
+        <p class="stz-film-kicker">The film${len ? ` &middot; ${esc(len)}` : ""}</p>
+        <p class="stz-film-title">${esc(f.title)}</p>
+        <p class="stz-film-meta">Narrated, and drawn live in your browser from its script. No video file.</p>
+        <button class="stz-film-play" type="button" aria-label="Play the film: ${esc(f.title)}"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3l12 7-12 7z"/></svg></button>
+      </div>
+    </div>
+  </figure>
+`;
+}
+const filmHead = (a) => (a.film?.slug
+  ? `<link rel="stylesheet" href="/films/brand/embed.css">\n<script type="module" src="/films/lib/card.js"></script>\n`
+  : "");
+
 export function sanitizeHtml(html = "") {
   let out = String(html);
   for (const [re, rep] of SANITIZE) out = out.replace(re, rep);
@@ -236,7 +260,7 @@ export function articleHtml(site, tax, a) {
   };
 
   return `${head(site, `${a.headline} - ${site.shortName}`, a.dek, canonical,
-    `<script type="application/ld+json">${JSON.stringify(ld)}</script>`)}
+    `${filmHead(a)}<script type="application/ld+json">${JSON.stringify(ld)}</script>`)}
 <main class="wrap">
 <article class="article">
   <div class="article-kicker">
@@ -247,7 +271,7 @@ ${a.templateType === "podcast" ? `    <span class="tag tag-audio">Audio</span>\n
   <h1 class="article-title">${esc(a.headline)}</h1>
   <p class="article-dek">${esc(a.dek)}</p>
 ${audioBlock(a)}
-
+${filmBlock(a)}
   <aside class="source-card">
     <p class="source-label">The story</p>
     <p class="source-title"><a href="${esc(a.source.url)}" rel="noopener nofollow">${esc(a.source.title)}</a></p>

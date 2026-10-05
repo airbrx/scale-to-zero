@@ -1,4 +1,4 @@
-// Tests for the request classification ported from signal/src/reporter.
+// Tests for the request classification (admin/lib/classify.mjs).
 // Run: node test/classify.test.mjs
 import assert from "node:assert/strict";
 import {

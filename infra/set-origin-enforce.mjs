@@ -25,14 +25,13 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { env, need } from "./shared/env.mjs";
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const config = JSON.parse(await readFile(path.join(ROOT, "config.json"), "utf8"));
-
-const FN = config.deploy.functionName ?? "stz-admin";
-const REGION = config.deploy.lambdaRegion ?? "us-east-1";
-const DIST = config.deploy.distributionId;
+const FN = env("FUNCTION_NAME", "stz-admin");
+const REGION = env("LAMBDA_REGION", "us-east-1");
+const DIST = need("DISTRIBUTION_ID", "node infra/provision.mjs");
 const ORIGIN_ID = "admin-lambda";
 const HEADER = "x-stz-origin";
 

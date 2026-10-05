@@ -342,6 +342,7 @@ const HANDLERS = {
       sections: b.sections,
       pullQuote: b.pullQuote ?? "",
       audio: b.audio ?? null,
+      film: b.film ?? null,
       tags: b.tags ?? [],
       _brief: b._brief,
       _sources: b._sources,
@@ -384,6 +385,16 @@ const HANDLERS = {
       ...existing, ...b,
       slug: existing.slug, updatedBy: actor.email, updatedAt: new Date().toISOString(),
     }), 200);
+  },
+
+  // ---- films: what the build published to staging's films/, to attach to an article
+  // Locally (STZ_LOCAL=1) the list is the local build, stories/dist/films/, so
+  // a film can be attached and tried before it is pushed; see routeLocalSite.
+  listFilms: async () => {
+    const m = process.env.STZ_LOCAL === "1"
+      ? JSON.parse(await readFile(path.join(LOCAL_FILMS, "manifest.json"), "utf8").catch(missingAs('{"films":[]}')))
+      : await store.getJson("films/manifest.json", null);
+    return json(200, m?.films ?? []);
   },
 
   deleteArticle: async ({ params, headers }) => {
@@ -558,6 +569,37 @@ async function routeUi(pathname) {
   }
 }
 
+// LOCAL DEVELOPMENT ONLY, like routeUi. The admin renders pages into the
+// staging bucket, which nothing public reads; locally, this serves them back
+// (http://localhost:8080/<slug>.html) so a saved article can be looked at
+// before publishing, with /films/ from the local build (node
+// stories/tools/publish.mjs) since staging only has films once CI has run.
+// Byte ranges for the films, so a voice can be scrubbed.
+const LOCAL_FILMS = path.join(HERE, "..", "stories", "dist", "films");
+// a file that isn't there is an answer (none built yet); any other failure is thrown
+const missingAs = (value) => (err) => { if (err.code === "ENOENT") return value; throw err; };
+const TYPES = { html: "text/html; charset=utf-8", css: "text/css; charset=utf-8", js: "text/javascript; charset=utf-8",
+  json: "application/json; charset=utf-8", md: "text/markdown; charset=utf-8", svg: "image/svg+xml", png: "image/png",
+  webp: "image/webp", jpg: "image/jpeg", ico: "image/x-icon", xml: "application/xml", txt: "text/plain; charset=utf-8",
+  m4a: "audio/mp4", mp3: "audio/mpeg" };
+async function routeLocalSite(pathname, headers) {
+  const rel = decodeURIComponent(pathname).replace(/^\/+/, "") || "index.html";
+  if (rel.includes("..")) return { status: 400, headers: { "content-type": "text/plain" }, body: "bad path" };
+  const type = TYPES[rel.split(".").pop()] ?? "application/octet-stream";
+  const film = rel.startsWith("films/");
+  const buf = film
+    ? await readFile(path.join(LOCAL_FILMS, rel.slice("films/".length))).catch(missingAs(null))
+    : await store.getBuffer(rel);
+  if (!buf) return { status: 404, headers: { "content-type": "text/plain" }, body: film ? "not in stories/dist/films (run node stories/tools/publish.mjs)" : "not in staging" };
+  const range = /^bytes=(\d*)-(\d*)$/.exec(headers.range ?? "");
+  if (range) {
+    const start = range[1] ? Number(range[1]) : Math.max(0, buf.length - Number(range[2]));
+    const end = range[1] && range[2] ? Math.min(Number(range[2]), buf.length - 1) : buf.length - 1;
+    return { status: 206, headers: { "content-type": type, "accept-ranges": "bytes", "content-range": `bytes ${start}-${end}/${buf.length}`, "cache-control": "no-store" }, body: buf.subarray(start, end + 1) };
+  }
+  return { status: 200, headers: { "content-type": type, "accept-ranges": "bytes", "cache-control": "no-store" }, body: buf };
+}
+
 /** The one router. Both entry points funnel through here. */
 export async function handleRequest({ method, pathname, query, headers, body }) {
   try {
@@ -656,6 +698,8 @@ if (process.env.STZ_LOCAL === "1") {
     // the deployed Lambda serves it not at all.
     const out = (url.pathname === "/admin" || url.pathname.startsWith("/admin/"))
       ? await routeUi(url.pathname)
+      : !url.pathname.startsWith("/api/")
+      ? await routeLocalSite(url.pathname, req.headers)
       : await handleRequest({
         method: req.method, pathname: url.pathname, query: url.searchParams,
         headers: req.headers, body: chunks.length ? Buffer.concat(chunks) : null,

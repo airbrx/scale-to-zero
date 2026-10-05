@@ -41,7 +41,7 @@ function normalize(e) {
     "c-ip": e["c-ip"],
     // c-country was added to the log delivery after the first run. It is
     // CloudFront's own geolocation -- more accurate than an IP database and
-    // free, which is why signal's geoip-lite (~100MB) was not brought across.
+    // free, which is why there is no ~100MB geoip package here.
     "c-country": dash(e["c-country"]),
     "x-forwarded-for": dash(e["x-forwarded-for"]),
     "cs-uri-query": dash(e["cs-uri-query"]),

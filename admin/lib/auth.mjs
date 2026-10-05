@@ -16,11 +16,10 @@
 // supplied email field is never trusted anywhere in this file, because a
 // request body is just whatever the caller decided to type.
 //
-// Note the difference from the signal/crm model this was adapted from: that one
-// requests a Google *access token* for the Sheets API and lets Google enforce
-// access to the sheet, so its client-side email is explicitly cosmetic. There is
-// no equivalent enforcement in front of an S3 bucket, so verification has to
-// happen here, on the server, before any write.
+// Why an ID token and not an access token: a page that only reads a Google
+// Sheet can let Google enforce access and treat the email it shows as
+// cosmetic. There is no equivalent enforcement in front of an S3 bucket, so
+// verification has to happen here, on the server, before any write.
 
 import { createVerify, createPublicKey } from "node:crypto";
 

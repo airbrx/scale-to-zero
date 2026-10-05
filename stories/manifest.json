@@ -1,0 +1,35 @@
+{
+  "stories": [
+    {
+      "slug": "every-scanner",
+      "title": "Probe All You Want",
+      "description": "A street at night, in fog. Bots read the certificate log and try every door of a full-stack shop. Our site is a printed page: reach through its door and you grab nothing. The CDN just hands out \"not here\".",
+      "date": "2026-10-03",
+      "minutes": 3.2,
+      "thumbT": 126,
+      "status": "draft",
+      "article": "https://scale-to-zero.com/2026-09-04-every-scanner-assumes-you-run-wordpress.html",
+      "articleTitle": "Probe all you want, there's no compute here..."
+    },
+    {
+      "slug": "how-we-make-these",
+      "title": "How We Make These",
+      "description": "How the Report's films are made, in their own material. It opens on the manifesto's ten rules folding a running application down to almost nothing; then one page becomes a street, a mill and a city, and the storytelling moves are shown, not told.",
+      "date": "2026-10-03",
+      "minutes": 1.4,
+      "thumbT": 14,
+      "status": "draft"
+    },
+    {
+      "slug": "model-vendor",
+      "title": "GitHub Didn't Break Today",
+      "description": "GitHub as a folded-paper machine. Copilot's belts are driven through the wall by engines GitHub doesn't own, and when one stops, its belt jams for 174 minutes. Nothing GitHub runs broke.",
+      "date": "2026-10-03",
+      "minutes": 1.5,
+      "thumbT": 17,
+      "status": "draft",
+      "article": "https://scale-to-zero.com/2026-09-03-github-didnt-break-its-model-vendor-did.html",
+      "articleTitle": "GitHub Didn't Break Today. Its Model Vendor Did."
+    }
+  ]
+}

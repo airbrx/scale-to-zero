@@ -238,6 +238,7 @@ async function openEditor(a, etag = null) {
   $("f-src-fig").value = a?.source?.figure ?? "";
   $("f-src-disc").value = a?.source?.discussionUrl ?? "";
   $("f-pull").value = a?.pullQuote ?? "";
+  await fillFilms(a?.film);
   $("f-audiourl").value = a?.audio?.url ?? "";
   $("audioMeta").textContent = a?.audio
     ? `${a.audio.mimeType ?? ""} ${a.audio.byteLength ?? 0} bytes${a.audio.durationSeconds ? `, ${Math.round(a.audio.durationSeconds)}s` : ""}`
@@ -283,7 +284,30 @@ function sectionsToHtml(sections) {
 }
 
 const toggleAudio = () => show($("audioFields"), $("f-template").value === "podcast");
+
+// The films the build published (GET /films), in a picker. An article whose
+// film is no longer listed keeps it as an option, so opening and saving it
+// never drops the film by accident.
+let films = null;
+async function fillFilms(current) {
+  if (!films) {
+    try { films = await auth.api("/films"); }
+    catch (e) { films = null; $("filmMeta").textContent = `The film list could not be loaded: ${e.message}`; }
+  }
+  const list = [...(films ?? [])];
+  if (current?.slug && !list.some((f) => f.slug === current.slug)) list.unshift({ ...current, missing: true });
+  const sel = $("f-film");
+  sel.innerHTML = '<option value="">none</option>' + list.map((f) =>
+    `<option value="${esc(f.slug)}">${esc(f.title)}${f.durationSeconds ? ` (${Math.floor(f.durationSeconds / 60)}:${String(Math.round(f.durationSeconds % 60)).padStart(2, "0")})` : ""}${f.missing ? " (no longer published)" : ""}</option>`).join("");
+  sel.value = current?.slug ?? "";
+  sel._films = list;
+}
+const chosenFilm = () => {
+  const f = $("f-film")._films?.find((x) => x.slug === $("f-film").value);
+  return f ? { slug: f.slug, title: f.title, durationSeconds: f.durationSeconds ?? null } : null;
+};
 $("f-template").addEventListener("change", () => { toggleAudio(); markDirty(); });
+$("f-film").addEventListener("change", markDirty);
 for (const id of ["f-headline", "f-dek", "f-status", "f-date", "f-category", "f-angle",
   "f-src-title", "f-src-url", "f-src-pub", "f-src-fig", "f-src-disc", "f-pull"]) {
   $(id).addEventListener("input", markDirty);
@@ -371,6 +395,7 @@ $("saveArticle").addEventListener("click", async () => {
       byteLength: Number($("f-audiourl").dataset.bytes || 0),
       durationSeconds: Number($("f-audiourl").dataset.duration || 0) || null,
     } : null,
+    film: chosenFilm(),
   };
 
   if (!payload.headline) return err($("editErr"), "A headline is required.");

@@ -1,0 +1,47 @@
+/* tokens.css - the kit's base stage palette: every token the films read,
+   with neutral defaults. brand/tokens.css loads after it and sets the
+   Report's values, so this file only matters for a token the brand leaves
+   alone.
+
+   The canvas cannot resolve var(), so sketch.js reads these through
+   getComputedStyle; html.dark (lib/theme.js) is the whole dark theme.
+   --oai is an extra accent the kit reserves; the Report's films don't use
+   it. */
+:root {
+  --stage: #ffffff;
+  --stage-card: #ffffff;
+  --stage-panel: #f1f1f2;
+  --stage-ink: #1a1a1a;
+  --stage-text: #505050;
+  --stage-grid: #b4b4ba;
+  --stage-line: #e3e3e6;
+  --muted: #8a8a8a;
+  --accent: #fd6c1d;
+  --accent-2: #ff8c42;
+  --accent-text: #bb4c08;
+  --glow: rgba(253, 108, 29, .045);
+  --ok: #1f7d5c;
+  --stop: #b3261e;
+  --water: #3b7ea1;
+  --coin: #d9a21b;
+  --oai: #00a080;
+}
+html.dark {
+  --stage: #1a1a1a;
+  --stage-card: #242424;
+  --stage-panel: #2a2a2a;
+  --stage-ink: #f2f2f2;
+  --stage-text: #e0e0e0;
+  --stage-grid: #56565c;
+  --stage-line: #333336;
+  --muted: #a0a0a0;
+  --accent: #fd6c1d;
+  --accent-2: #ff8c42;
+  --accent-text: #ff8c42;
+  --glow: rgba(253, 108, 29, .045);
+  --ok: #4fbf94;
+  --stop: #ef5350;
+  --water: #7db5d0;
+  --coin: #e0b84f;
+  --oai: #1fb894;
+}

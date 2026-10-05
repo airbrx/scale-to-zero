@@ -1,0 +1,79 @@
+/* embed.css - a film inside an article: the card, then the player in its place.
+
+   Loaded only by articles that carry a film (shared/render.mjs). It uses the
+   site's own variables (assets/style.css: --ink, --paper, --card, --rule,
+   --accent, --serif, --mono), so the card is the page's paper and type, in
+   light and dark alike: square corners, hairline rules, the masthead's double
+   rule, red only on the thing you press. The film's canvas brings its own
+   palette (lib/embed.js); nothing here reaches it. */
+
+.stz-film { margin: 2rem 0 2.4rem; outline: none; }
+.stz-film:focus-visible .stz-film-stage { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.stz-film-stage {
+  position: relative; aspect-ratio: 16 / 9; overflow: hidden;
+  background: var(--card); border: 1px solid var(--rule); border-top: 3px double var(--rule);
+}
+
+/* the card */
+.stz-film-face {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: .45rem; padding: 1.2rem; text-align: center;
+  transition: opacity .45s ease, transform .45s ease;
+}
+.stz-film-kicker { margin: 0; font: italic 400 .95rem/1.3 var(--serif); color: var(--ink-faint); }
+.stz-film-title { margin: 0; max-width: 30ch; font: 700 clamp(1.3rem, 3.6vw, 2.1rem)/1.15 var(--serif); letter-spacing: -.01em; color: var(--ink); }
+.stz-film-meta { margin: 0; max-width: 42ch; font: 400 .92rem/1.4 var(--serif); color: var(--ink-soft); }
+.stz-film-play {
+  margin-top: .8rem; width: 60px; height: 60px; display: grid; place-items: center;
+  border: 0; border-radius: 0; background: var(--ink); color: var(--paper); cursor: pointer;
+  transition: background .15s ease;
+}
+.stz-film-play svg { width: 22px; height: 22px; fill: currentColor; margin-left: 3px; }
+.stz-film-play:hover, .stz-film-play:focus-visible { background: var(--accent); color: #fff; outline: none; }
+.stz-film.is-loading .stz-film-play { cursor: progress; animation: stz-wait 1s ease-in-out infinite alternate; }
+@keyframes stz-wait { to { opacity: .45; } }
+.stz-film.is-error .stz-film-meta { color: var(--accent); }
+
+/* the turn: the card steps back, the film comes up in its place */
+.stz-film.is-live .stz-film-face { opacity: 0; transform: scale(.98); pointer-events: none; }
+.stz-film-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity .6s ease .2s; cursor: pointer; }
+.stz-film.is-live .stz-film-cv { opacity: 1; }
+
+/* the caption: a strip of newsprint with torn ends, as in the films */
+.stz-film-cc {
+  position: absolute; left: 50%; bottom: 4%; transform: translateX(-50%);
+  width: max-content; max-width: 86%; margin: 0; padding: .3em 1.1em; text-align: center;
+  font: 500 clamp(12px, 1.9vw, 20px)/1.3 var(--serif); color: var(--ink); background: var(--card);
+  clip-path: polygon(1.2% 0, 98.8% 0, 99.6% 14%, 98.6% 31%, 100% 49%, 98.9% 66%, 99.7% 83%, 98.6% 100%, 1.3% 100%, .3% 84%, 1.4% 67%, 0 50%, 1.1% 33%, .2% 16%);
+  pointer-events: none;
+}
+
+/* the bar, under the stage */
+.stz-film-bar { display: flex; align-items: center; gap: .55rem; padding: .5rem 0 0; font: 500 .78rem/1 var(--mono); color: var(--ink-soft); }
+.stz-film-bar button {
+  min-width: 2.1rem; height: 2rem; padding: 0 .5rem; display: grid; place-items: center;
+  border: 1px solid var(--rule); border-radius: 0; background: var(--card); color: var(--ink); font: inherit; cursor: pointer;
+}
+.stz-film-bar button:hover, .stz-film-bar button:focus-visible { border-color: var(--ink); outline: none; }
+.stz-film-bar button.stz-pp { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.stz-film-bar button.stz-pp:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.stz-film-bar button[aria-pressed="false"] { color: var(--ink-faint); text-decoration: line-through; }
+.stz-film-bar svg { width: 12px; height: 12px; fill: currentColor; }
+.stz-film-bar .stz-scrub { flex: 1; min-width: 4rem; accent-color: var(--accent); }
+.stz-film-bar .stz-time { white-space: nowrap; }
+
+/* full screen: the stage as large as the screen allows, the bar under it */
+.stz-film:fullscreen { display: flex; flex-direction: column; justify-content: center; margin: 0; padding: 1rem; background: var(--paper); }
+.stz-film:fullscreen .stz-film-stage { width: min(100%, calc((100vh - 4.5rem) * 16 / 9)); margin: 0 auto; }
+.stz-film:fullscreen .stz-film-bar { width: min(100%, calc((100vh - 4.5rem) * 16 / 9)); margin: 0 auto; }
+
+@media (max-width: 520px) {
+  .stz-film-meta { display: none; }
+  .stz-film-play { width: 48px; height: 48px; margin-top: .4rem; }
+  .stz-film-bar .stz-time { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stz-film-face, .stz-film-cv { transition: none; }
+  .stz-film.is-loading .stz-film-play { animation: none; }
+}

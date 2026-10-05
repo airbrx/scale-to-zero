@@ -42,6 +42,10 @@
     {
       "name": "publish",
       "description": "Promote staging to live."
+    },
+    {
+      "name": "films",
+      "description": "Films from stories/, to attach to articles"
     }
   ],
   "paths": {
@@ -689,6 +693,31 @@
           }
         }
       }
+    },
+    "/films": {
+      "get": {
+        "operationId": "listFilms",
+        "tags": [
+          "films"
+        ],
+        "summary": "The films that can be attached to an article",
+        "description": "Every film the build published to the staging bucket's films/ (stories/, on each push to main). Empty when none has been published yet.",
+        "responses": {
+          "200": {
+            "description": "Newest first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilmList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1122,6 +1151,9 @@
           },
           "updatedAt": {
             "$ref": "#/components/schemas/Timestamp"
+          },
+          "film": {
+            "$ref": "#/components/schemas/Film"
           }
         }
       },
@@ -1187,6 +1219,9 @@
           },
           "_sources": {
             "type": "object"
+          },
+          "film": {
+            "$ref": "#/components/schemas/Film"
           }
         }
       },
@@ -1261,6 +1296,9 @@
           },
           "_sources": {
             "type": "object"
+          },
+          "film": {
+            "$ref": "#/components/schemas/Film"
           }
         }
       },
@@ -1321,6 +1359,9 @@
           },
           "_sources": {
             "type": "object"
+          },
+          "film": {
+            "$ref": "#/components/schemas/Film"
           }
         }
       },
@@ -1565,6 +1606,66 @@
         "type": "object",
         "description": "What processLogs folded in (admin/lib/stats.mjs).",
         "additionalProperties": true
+      },
+      "Film": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "description": "A film shown in the article as a card that plays in place (stories/), or null for none. The film's files are under /films/<slug>/.",
+        "required": [
+          "slug",
+          "title"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "slug": {
+            "$ref": "#/components/schemas/Slug"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "durationSeconds": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          }
+        }
+      },
+      "FilmSummary": {
+        "type": "object",
+        "description": "A film published to /films/ (stories/tools/publish.mjs), from films/manifest.json in staging.",
+        "required": [
+          "slug",
+          "title"
+        ],
+        "properties": {
+          "slug": {
+            "$ref": "#/components/schemas/Slug"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "durationSeconds": {
+            "type": "number"
+          },
+          "article": {
+            "type": "string",
+            "description": "The URL of the article it was made from, if any."
+          }
+        }
+      },
+      "FilmList": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/FilmSummary"
+        }
       }
     }
   }

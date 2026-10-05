@@ -23,24 +23,21 @@ import os from "node:os";
 import { parseLogBuffer } from "../admin/lib/cfparser.mjs";
 import { buildDay, mergeDetail, mergeCounts } from "../admin/lib/stats.mjs";
 import { MMDBReader, GeoLookup } from "../admin/lib/mmdb.mjs";
+import { need } from "./shared/env.mjs";
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const config = JSON.parse(await readFile(path.join(ROOT, "config.json"), "utf8"));
 
-const STAGING = config.deploy.stagingBucket;
-const LOGS = config.deploy.logBucket;
-const REGION = config.deploy.region;
+const STAGING = need("STAGING_BUCKET", "node infra/provision.mjs");
+const LOGS = need("LOG_BUCKET", "node infra/enable-logging.mjs");
+const REGION = need("BUCKET_REGION");
 const OWN_HOST = new URL(config.site.baseUrl).hostname;
 const DRY = process.argv.includes("--dry-run");
 
 const GEO_KEY = "_internal/geo/dbip-city-lite.mmdb.gz";
 const PREFIX = "_internal/stats";
 
-if (!LOGS) {
-  console.error("FATAL: no logBucket in config.json. Run: node infra/enable-logging.mjs");
-  process.exit(1);
-}
 
 const tmp = await mkdtemp(path.join(os.tmpdir(), "stz-stats-"));
 const aws = (args) => execFileAsync("aws", [...args, "--region", REGION], { maxBuffer: 1 << 28 });

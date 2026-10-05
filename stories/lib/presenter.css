@@ -1,0 +1,74 @@
+/* presenter.css - the prompter. Dark for reading
+   in both themes; only the two previews follow the story's theme. Chrome
+   colours carry a pr- prefix so they never collide with the stage tokens. */
+:root { --pr-a: #fd6c1d; --pr-bg: #0b0b0d; --pr-line: #26262b; --pr-text: #e9e9ec; --pr-muted: #7b7b85; --fs: 44px; --read: 34%; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--pr-bg); color: var(--pr-text); font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif; overflow: hidden; }
+.app { display: grid; grid-template-columns: 1fr 34vw; grid-template-rows: 56px 1fr 44px; height: 100%; }
+
+.top { grid-column: 1 / -1; display: flex; align-items: center; gap: 22px; padding: 0 20px; border-bottom: 1px solid var(--pr-line); background: #101013; font-size: 14px; }
+.top .state { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; font-size: 12px; color: var(--pr-muted); }
+.top .state i { width: 10px; height: 10px; border-radius: 50%; background: #444; }
+.top .state.run { color: #fff; } .top .state.run i { background: #ef4444; box-shadow: 0 0 10px #ef4444; }
+.top .now { font-weight: 700; white-space: nowrap; } .top .now b { color: var(--pr-a); font-variant-numeric: tabular-nums; }
+.top .clock { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 20px; white-space: nowrap; }
+.top .clock span { color: var(--pr-muted); font-size: 14px; font-weight: 600; }
+.top .left { font-variant-numeric: tabular-nums; color: var(--pr-muted); font-weight: 600; white-space: nowrap; }
+.top .left b { color: #fff; }
+.top .sp { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.btn { background: #1d1d22; color: #eee; border: 1px solid #2e2e35; border-radius: 8px; padding: 7px 12px; font: 600 13px Inter, system-ui, sans-serif; cursor: pointer; white-space: nowrap; text-decoration: none; }
+.btn:hover { border-color: var(--pr-a); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.pri { background: var(--pr-a); border-color: var(--pr-a); color: #fff; }
+.wpm { font-variant-numeric: tabular-nums; font-weight: 800; min-width: 74px; text-align: center; }
+
+/* The reading line sits a third of the way down; the text moves under it,
+   one sentence lit at a time. */
+.prompter { position: relative; overflow: hidden; border-right: 1px solid var(--pr-line); }
+.prompter .mask { position: absolute; inset: 0; pointer-events: none; z-index: 2; background: linear-gradient(#0b0b0d 0%, rgba(11, 11, 13, 0) 18%, rgba(11, 11, 13, 0) 78%, #0b0b0d 100%); }
+.prompter .line { position: absolute; left: 0; right: 0; top: var(--read); z-index: 3; height: 0; border-top: 2px solid rgba(253, 108, 29, .55); pointer-events: none; }
+.prompter .line::before { content: ""; position: absolute; left: 10px; top: -11px; border: 10px solid transparent; border-left: 14px solid var(--pr-a); }
+.roll { position: absolute; left: 0; right: 0; top: 0; padding: 0 7vw 70vh; will-change: transform; }
+.roll.mirror { scale: -1 1; }
+.sec { padding-top: 9vh; }
+/* The beat marker: where the film moves on. Muted, so it is never read aloud. */
+.sec h2 { font-size: 13px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: #55555d; margin-bottom: 3vh; display: flex; gap: 12px; align-items: center; }
+.sec h2::after { content: ""; flex: 1; height: 1px; background: var(--pr-line); }
+.sec h2 small { color: var(--pr-muted); letter-spacing: .08em; font-weight: 700; }
+.say { font-size: var(--fs); line-height: 1.42; font-weight: 600; color: #8c8c95; margin-bottom: .9em; }
+.say .s { transition: color .3s; }
+.say .s.now { color: #fff; }
+.say .s.past { color: #44444b; }
+.note { font-size: calc(var(--fs) * .42); font-style: italic; color: #d0a07f; margin: 0 0 1.2em; padding-left: 14px; border-left: 3px solid rgba(253, 108, 29, .4); }
+/* A cue fires its build on its own, so the reader never needs it: hidden
+   unless c turns them on for editing. */
+.cue { display: inline-block; font-size: calc(var(--fs) * .36); font-weight: 800; letter-spacing: .06em; color: var(--pr-a); background: rgba(253, 108, 29, .12); border-radius: 6px; padding: .05em .45em; vertical-align: .25em; margin: 0 .15em; }
+p.cueline { margin: 0 0 .5em; line-height: 1; }
+.roll:not(.cues) .cue, .roll:not(.cues) p.cueline { display: none; }
+.pause { font-size: calc(var(--fs) * .4); color: var(--pr-muted); letter-spacing: .3em; text-transform: uppercase; margin-bottom: 1.2em; }
+.err-roll { padding: 6vh 5vw; color: #fca5a5; font-size: 18px; line-height: 1.5; }
+.count { position: absolute; inset: 0; z-index: 5; display: none; align-items: center; justify-content: center; font-size: 22vh; font-weight: 800; color: var(--pr-a); background: rgba(11, 11, 13, .7); }
+.count.on { display: flex; }
+/* the title's lead-in: counts the speaker down to the first word */
+.lead { position: absolute; right: 4vw; top: calc(var(--read) - 9vh); z-index: 4; display: flex; flex-direction: column; align-items: center; font-size: 12vh; font-weight: 800; line-height: 1; color: var(--pr-a); font-variant-numeric: tabular-nums; }
+.lead[hidden] { display: none; }
+.lead small { font-size: 14px; letter-spacing: .2em; text-transform: uppercase; color: var(--pr-muted); margin-bottom: 8px; }
+
+.side { padding: 16px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+.side h3 { font-size: 11px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: var(--pr-muted); display: flex; justify-content: space-between; gap: 12px; }
+.side h3 b { color: #fff; letter-spacing: .04em; text-transform: none; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shot { position: relative; aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden; background: var(--stage); border: 1px solid var(--pr-line); flex: none; }
+.shot canvas { display: block; width: 100%; height: 100%; }
+.shot.live { border-color: rgba(253, 108, 29, .6); }
+.bar2 { height: 4px; border-radius: 2px; background: #222; overflow: hidden; flex: none; } .bar2 i { display: block; height: 100%; width: 0; background: var(--pr-a); }
+.err { color: #fca5a5; font-size: 13px; line-height: 1.5; }
+.keys { font-size: 12px; color: var(--pr-muted); line-height: 1.9; margin-top: auto; }
+.keys kbd { display: inline-block; min-width: 22px; text-align: center; padding: 0 6px; border: 1px solid #333; border-bottom-width: 2px; border-radius: 5px; color: #ddd; font: 600 11px/18px Inter, system-ui, sans-serif; margin-right: 4px; }
+.keys .hint { margin-top: 6px; }
+
+/* The film as a strip: one segment per beat, width by length; click to jump. */
+.reel { grid-column: 1 / -1; position: relative; display: flex; border-top: 1px solid var(--pr-line); background: #101013; }
+.reel .seg { position: relative; border-right: 1px solid #000; background: #18181c; color: var(--pr-muted); font: 700 11px/44px Inter, system-ui, sans-serif; padding-left: 8px; overflow: hidden; white-space: nowrap; cursor: pointer; }
+.reel .seg:hover { background: #202026; color: #fff; }
+.reel .seg.on { background: #241a14; color: #fff; }
+.reel .head { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--pr-a); box-shadow: 0 0 8px var(--pr-a); pointer-events: none; }

@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="lib/theme.js"></script>
+<script>document.documentElement.dataset.theme = window.storyTheme.get();</script>
+<title>Report Films Docs</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  /* The studio's two documents, rendered from their Markdown each time the
+     page loads, so they never drift from the files: ?doc=style (STYLE.md)
+     and ?doc=built (README.md). Self-contained like the shelf: the site's
+     palette and type, links only within stories/. */
+  :root {
+    --ink: #14161a; --ink-soft: #4a5058; --ink-faint: #767d87; --paper: #f7f6f3; --card: #ffffff; --rule: #ddd9d1;
+    --accent: #b3341f; --accent-2: #1b6b57; --measure: 40rem;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --ink: #e9e6e0; --ink-soft: #a8a49c; --ink-faint: #7d7973; --paper: #14151a; --card: #1c1e24; --rule: #2f323a; --accent: #ef6a4f; --accent-2: #4fbf9c; }
+  }
+  :root[data-theme="dark"] { --ink: #e9e6e0; --ink-soft: #a8a49c; --ink-faint: #7d7973; --paper: #14151a; --card: #1c1e24; --rule: #2f323a; --accent: #ef6a4f; --accent-2: #4fbf9c; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 17px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; }
+
+  .masthead { border-bottom: 3px double var(--rule); padding: 2.2rem 1.5rem 1.1rem; text-align: center; }
+  .wordmark { display: inline-block; font-family: var(--serif); font-size: clamp(1.9rem, 6vw, 3.1rem); font-weight: 700; letter-spacing: -0.02em; text-decoration: none; line-height: 1.05; }
+  .wordmark-the { font-style: italic; font-weight: 400; color: var(--ink-soft); }
+  .wordmark-report { color: var(--accent); }
+  .masthead-tag { margin: .5rem 0 0; font-family: var(--mono); font-size: .72rem; text-transform: uppercase; letter-spacing: .13em; color: var(--ink-faint); }
+  .masthead-nav { margin-top: 1.1rem; display: flex; gap: 1.4rem; justify-content: center; flex-wrap: wrap; font-family: var(--mono); font-size: .74rem; text-transform: uppercase; letter-spacing: .09em; }
+  .masthead-nav a, .masthead-nav button { color: var(--ink-soft); text-decoration: none; padding: 0 0 2px; background: none; border: 0; font: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer; }
+  .masthead-nav a:hover, .masthead-nav button:hover { color: var(--accent); border-bottom: 1px solid var(--accent); }
+
+  .wrap { max-width: var(--measure); margin: 0 auto; padding: 2.4rem 1.5rem 1rem; }
+  /* the contents, as the site lists its principles: red mono numbers, serif names, hairlines */
+  .contents { list-style: none; margin: 0 0 2.6rem; padding: 0 0 1.4rem; border-bottom: 1px solid var(--rule); }
+  .contents li { display: flex; gap: .9rem; padding: .45rem 0; border-bottom: 1px solid var(--rule); }
+  .contents li:last-child { border-bottom: 0; }
+  .contents .n { font-family: var(--mono); font-size: .8rem; font-weight: 600; color: var(--accent); min-width: 1.6rem; line-height: 1.9; }
+  .contents a { font-family: var(--serif); font-weight: 700; text-decoration: none; }
+  .contents a:hover { color: var(--accent); }
+
+  .doc h1 { font-family: var(--serif); font-size: clamp(2rem, 5vw, 2.6rem); line-height: 1.15; letter-spacing: -0.015em; margin: 0 0 1.2rem; }
+  .doc h1 .key { color: var(--accent); }
+  .doc h2 { font-family: var(--serif); font-size: 1.65rem; line-height: 1.2; margin: 3rem 0 1rem; padding-top: 1.4rem; border-top: 3px double var(--rule); }
+  .doc h2 .n { color: var(--accent); margin-right: .35rem; }
+  .doc h3 { font-family: var(--serif); font-size: 1.2rem; margin: 2rem 0 .5rem; }
+  .doc p { margin: 0 0 1rem; }
+  .doc ul, .doc ol { margin: 0 0 1.2rem; padding-left: 1.3rem; }
+  .doc li { margin: 0 0 .5rem; }
+  .doc ol { list-style: none; padding-left: 0; counter-reset: step; }
+  .doc ol > li { counter-increment: step; display: grid; grid-template-columns: 2rem 1fr; }
+  .doc ol > li::before { content: counter(step, decimal-leading-zero); font-family: var(--mono); font-size: .8rem; font-weight: 600; color: var(--accent); line-height: 2; }
+  .doc strong { font-weight: 700; }
+  .doc code { font-family: var(--mono); font-size: .86em; background: var(--card); border: 1px solid var(--rule); padding: .05em .3em; }
+  .doc pre { font-family: var(--mono); font-size: .78rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); border-left: 0; border-right: 0; padding: .9rem 0; margin: 0 0 1.4rem; overflow-x: auto; }
+  .doc pre code { background: none; border: 0; padding: 0; font-size: inherit; }
+  .doc .source { font-family: var(--serif); font-style: italic; color: var(--ink-soft); margin: -.4rem 0 1.6rem; }
+  .doc .source a { color: var(--accent); text-underline-offset: 2px; }
+  .doc hr { display: none; }   /* the double rule above each section does this job */
+  .doc table { width: 100%; border-collapse: collapse; margin: 0 0 1.6rem; font-size: .92rem; }
+  .doc th { text-align: left; font-family: var(--mono); font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-faint); font-weight: 600; padding: .4rem .6rem .4rem 0; border-bottom: 1px solid var(--ink); }
+  .doc td { vertical-align: top; padding: .55rem .6rem .55rem 0; border-bottom: 1px solid var(--rule); }
+  .doc td:first-child { font-family: var(--serif); font-weight: 700; }
+  @media (max-width: 640px) { .doc table, .doc thead, .doc tbody, .doc tr, .doc th, .doc td { display: block; } .doc thead { display: none; } .doc tr { padding: .6rem 0; border-bottom: 1px solid var(--rule); } .doc td { border: 0; padding: .1rem 0; } }
+
+  .footer { border-top: 3px double var(--rule); margin-top: 3.5rem; padding: 2rem 1.5rem 3rem; text-align: center; }
+  .footer-meta { font-family: var(--mono); font-size: .7rem; color: var(--ink-faint); max-width: 38rem; margin: 0 auto; line-height: 1.7; }
+  .err { color: var(--accent); font-family: var(--serif); }
+</style>
+</head>
+<body>
+<header class="masthead">
+  <a class="wordmark" href="index.html"><span class="wordmark-the">The</span> Scale-to-Zero <span class="wordmark-report">Report</span></a>
+  <p class="masthead-tag" id="tag"></p>
+  <nav class="masthead-nav">
+    <a href="index.html">Films</a>
+    <a href="doc.html?doc=style">Style guide</a>
+    <a href="doc.html?doc=built">How they're built</a>
+    <button id="theme" type="button"></button>
+  </nav>
+</header>
+
+<main class="wrap">
+  <ol class="contents" id="contents"></ol>
+  <article class="doc" id="doc"><p>Loading…</p></article>
+</main>
+
+<script>
+  (async () => {
+    const DOCS = {
+      style: { md: 'STYLE.md', tag: 'How the films look', key: /style/i },
+      built: { md: 'README.md', tag: 'How the films are built', key: /films/i },
+    };
+    const which = new URLSearchParams(location.search).get('doc') || 'style';
+    const D = DOCS[which];
+    const doc = document.getElementById('doc'), contents = document.getElementById('contents');
+    const btn = document.getElementById('theme');
+    const label = () => { btn.textContent = window.storyTheme.get() === 'dark' ? 'Light' : 'Dark'; };
+    label();
+    btn.addEventListener('click', () => { document.documentElement.dataset.theme = window.storyTheme.toggle(); label(); });
+
+    const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const slug = (s) => s.toLowerCase().replace(/<[^>]+>/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const HREF = { 'STYLE.md': 'doc.html?doc=style', 'README.md': 'doc.html?doc=built' };
+    // inline: code first (so nothing inside it is touched), then links, bold, italic
+    function inline(s) {
+      const codes = [];
+      let out = esc(s).replace(/`([^`]+)`/g, (_, c) => { codes.push(c); return `\u0000${codes.length - 1}\u0000`; });
+      out = out.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, t, u) => `<a href="${HREF[u] || u}">${t}</a>`)
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?!\*)/g, '$1<em>$2</em>');
+      return out.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${codes[+i]}</code>`);
+    }
+    // the subset STYLE.md uses: headings, paragraphs, lists (wrapped lines indented), tables, rules
+    function render(md) {
+      const lines = md.replace(/\r/g, '').split('\n'), html = [], toc = [];
+      let i = 0, para = [];
+      const flush = () => { if (para.length) { html.push(`<p>${inline(para.join(' '))}</p>`); para = []; } };
+      while (i < lines.length) {
+        const l = lines[i];
+        if (!l.trim()) { flush(); i++; continue; }
+        if (l.startsWith('```')) {
+          flush();
+          const code = [];
+          for (i++; i < lines.length && !lines[i].startsWith('```'); i++) code.push(lines[i]);
+          if (i >= lines.length) throw new Error(`${D.md}: a code block never closes`);
+          html.push(`<pre><code>${esc(code.join('\n'))}</code></pre>`);
+          i++; continue;
+        }
+        if (/^---+\s*$/.test(l)) { flush(); html.push('<hr>'); i++; continue; }
+        const h = l.match(/^(#{1,3})\s+(.*)$/);
+        if (h) {
+          flush();
+          const n = h[1].length, text = h[2], id = slug(text);
+          if (n === 1) {
+            html.push(`<h1>${inline(text).replace(D.key, (w) => `<span class="key">${w}</span>`)}</h1>`);
+            html.push(`<p class="source">This page is <a href="${D.md}">${D.md}</a>, rendered as it loads; edit the file and the page follows.</p>`);
+          }
+          else if (n === 2) {
+            const m = text.match(/^(\d+)\.\s+(.*)$/);
+            html.push(`<h2 id="${id}">${m ? `<span class="n">${m[1]}</span>${inline(m[2])}` : inline(text)}</h2>`);
+            toc.push([(m ? m[1] : String(toc.length + 1)).padStart(2, '0'), m ? m[2] : text, id]);
+          } else html.push(`<h3 id="${id}">${inline(text)}</h3>`);
+          i++; continue;
+        }
+        if (l.startsWith('|')) {
+          flush();
+          const rows = [];
+          while (i < lines.length && lines[i].startsWith('|')) { rows.push(lines[i]); i++; }
+          const cells = (r) => r.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
+          const head = cells(rows[0]), body = rows.slice(2).map(cells);
+          html.push(`<table><thead><tr>${head.map((c) => `<th>${inline(c)}</th>`).join('')}</tr></thead><tbody>${body.map((r) => `<tr>${r.map((c) => `<td>${inline(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`);
+          continue;
+        }
+        const li = l.match(/^(\s*)([-*]|\d+\.)\s+(.*)$/);
+        if (li) {
+          flush();
+          const ordered = /\d/.test(li[2]), items = [];
+          while (i < lines.length) {
+            const m = lines[i].match(/^(\s*)([-*]|\d+\.)\s+(.*)$/);
+            if (m && /\d/.test(m[2]) === ordered) { items.push([m[3]]); i++; continue; }
+            if (lines[i].trim() && /^\s{2,}\S/.test(lines[i]) && items.length) { items[items.length - 1].push(lines[i].trim()); i++; continue; }
+            break;
+          }
+          const tag = ordered ? 'ol' : 'ul';
+          html.push(`<${tag}>${items.map((it) => `<li><span>${inline(it.join(' '))}</span></li>`).join('')}</${tag}>`);
+          continue;
+        }
+        para.push(l.trim()); i++;
+      }
+      flush();
+      return { html: html.join('\n'), toc };
+    }
+
+    try {
+      if (!D) throw new Error(`no document called "${which}"`);
+      document.getElementById('tag').textContent = D.tag;
+      const res = await fetch(`${D.md}?r=${Date.now()}`);
+      if (!res.ok) throw new Error(`${D.md}: HTTP ${res.status}`);
+      const { html, toc } = render(await res.text());
+      doc.innerHTML = html;
+      contents.innerHTML = toc.map(([n, t, id]) => `<li><span class="n">${n}</span><a href="#${id}">${inline(t)}</a></li>`).join('');
+      if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
+    } catch (e) {
+      console.error(e);
+      doc.innerHTML = `<p class="err">This page could not load: ${esc(e.message)}.${D ? ` <a href="${D.md}">Open ${D.md}.</a>` : ''}</p>`;
+    }
+  })();
+</script>
+</body>
+</html>

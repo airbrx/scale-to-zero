@@ -38,9 +38,10 @@ in a `removePlugins` list or they raise licence errors. So: build our own.
   stylesheet, which is what keeps the admin CSP at `script-src 'self'` with no
   second request to account for. Break the CSS rule in `webpack.config.js` and
   the bundle still builds -- the editor just renders unstyled.
-- **The output is committed.** The deploy script copies `admin/ui/` to S3 as
-  flat files; it does not build anything. A rebuild that is not committed and
-  deployed has changed nothing.
+- **The output is not committed.** `admin/ui/ckeditor.js` is gitignored (it is
+  CKEditor's code, under CKEditor's licence). Build it before deploying:
+  `infra/deploy-admin-ui.mjs` copies `admin/ui/` to S3 as flat files and builds
+  nothing.
 
 ## Upgrading
 

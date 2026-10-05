@@ -1,10 +1,8 @@
 // Request classification: who visited, how they got here, and what they did.
 //
-// Ported from airbrx/signal/src/reporter/parsers.js, which is a considerably
-// more complete model than the first version of this admin's stats. Brought
-// across: sessionization, campaign and channel attribution, curated bot
-// identities with a fingerprint fallback, page-vs-asset classification that
-// understands directory-style URLs, and real-client-IP extraction.
+// Sessionization, campaign and channel attribution, curated bot identities
+// with a fingerprint fallback, page-vs-asset classification that understands
+// directory-style URLs, and real-client-IP extraction.
 //
 // NOT brought across: geoip-lite. It is roughly 100MB and this bundle already
 // carries sharp. The CloudFront log delivery was reconfigured to include the

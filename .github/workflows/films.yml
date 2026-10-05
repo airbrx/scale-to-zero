@@ -1,0 +1,75 @@
+# The films (stories/) to the staging bucket's films/, on every push to main
+# that touches them. From there the admin lists them for attaching to an
+# article, and the admin's own publish takes them live with everything else:
+# nothing here writes to the live site.
+#
+# AWS access is a role this workflow assumes through GitHub's OIDC provider:
+# no keys stored anywhere. The role (infra/films-ci.mjs) can write and delete
+# only under films/ in the staging bucket, and only for a run on main.
+#
+# Repository variables (Settings -> Secrets and variables -> Actions ->
+# Variables), set by infra/films-ci.mjs: FILMS_ROLE_ARN, STAGING_BUCKET,
+# BUCKET_REGION. The repository is public and so are its logs: the account id
+# and the bucket name are masked, and the sync reports errors only.
+
+name: films
+
+on:
+  push:
+    branches: [main]
+    paths: ["stories/**", ".github/workflows/films.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: films
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # every film with a voice, smoke-tested first; any failure stops here,
+      # before anything reaches the bucket
+      - name: Build the films
+        run: node stories/tools/publish.mjs
+
+      - name: Mask the deployment's names
+        run: |
+          echo "::add-mask::${{ vars.STAGING_BUCKET }}"
+          echo "::add-mask::${{ vars.FILMS_ROLE_ARN }}"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.FILMS_ROLE_ARN }}
+          aws-region: ${{ vars.BUCKET_REGION }}
+          mask-aws-account-id: true
+
+      # --delete in every pass (each deletes only what it includes): a film
+      # taken out of the repository leaves staging too. The
+      # cache headers match what the admin writes (admin/lib/store.mjs), and
+      # its publish copies them to live unchanged.
+      - name: Sync to staging films/
+        env:
+          STAGING_BUCKET: ${{ vars.STAGING_BUCKET }}
+        run: |
+          aws s3 sync stories/dist/films "s3://${STAGING_BUCKET}/films" --delete --only-show-errors \
+            --cache-control "public, max-age=300, s-maxage=31536000" \
+            --exclude "*.js" --exclude "*.md"
+          aws s3 sync stories/dist/films "s3://${STAGING_BUCKET}/films" --delete --only-show-errors \
+            --cache-control "public, max-age=300, s-maxage=31536000" \
+            --exclude "*" --include "*.js" --content-type "text/javascript; charset=utf-8"
+          aws s3 sync stories/dist/films "s3://${STAGING_BUCKET}/films" --delete --only-show-errors \
+            --cache-control "public, max-age=300, s-maxage=31536000" \
+            --exclude "*" --include "*.md" --content-type "text/markdown; charset=utf-8"
+          echo "films synced to staging. Publish from the admin to take them live."

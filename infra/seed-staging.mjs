@@ -26,23 +26,20 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import os from "node:os";
 import { writeFile, mkdtemp } from "node:fs/promises";
+import { need } from "./shared/env.mjs";
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const readJson = async (p) => JSON.parse(await readFile(path.join(ROOT, p), "utf8"));
 
 const config = await readJson("config.json");
-const STAGING = config.deploy.stagingBucket;
-const REGION = config.deploy.region;
+const STAGING = need("STAGING_BUCKET", "node infra/provision.mjs");
+const REGION = need("BUCKET_REGION");
 
 const argv = process.argv.slice(2);
 const owner = argv.includes("--owner") ? argv[argv.indexOf("--owner") + 1] : null;
 const force = argv.includes("--force");
 
-if (!STAGING || STAGING.includes("REPLACE-ME")) {
-  console.error("FATAL: no staging bucket in config.json. Run: node infra/provision.mjs");
-  process.exit(1);
-}
 if (!owner || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(owner)) {
   console.error("FATAL: --owner <email> is required and must be a real address.\n" +
     "  It must be the Google account you will sign in with.");

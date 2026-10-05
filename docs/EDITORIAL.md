@@ -116,14 +116,14 @@ The house position is **named and pointed**, with rules.
   name on the invoice.
 - Link the source, always and prominently. The reader checks your reading.
 - Aim the criticism at the architecture decision and the model that encouraged it.
-- Give credit where it is due. The InstantDB piece is pointed *and* says plainly that
-  they handled the wind-down better than most. That combination is what makes it
-  credible rather than cheap.
+- Give credit where it is due. A piece can be pointed *and* say plainly where the
+  company handled things well. That combination is what makes it credible rather
+  than cheap.
 
 **Do not:**
-- Assert a cause the source does not support. "InstantDB shut down because of compute
-  costs" is not something we know. "InstantDB shut down, and its users now owe twelve
-  months of migration work to somebody else's schedule" is.
+- Assert a cause the source does not support. "GitHub's AI strategy took Copilot
+  down" is not something we know. "Copilot lost its Grok models for 174 minutes when
+  their provider had an incident" is.
 - Attack individuals. Architectures and business models, not people.
 - Report a private or unverified number. If it is not in a public source you linked,
   it does not go in.
@@ -174,7 +174,7 @@ Those exist. Writing them anyway is how the publication stops being trustworthy.
 
 The claim, not the topic.
 
-- Good: "You Did Not Buy a Database. You Rented Somebody's Uptime."
-- Bad: "InstantDB Shutdown: Lessons for Backend Architecture"
+- Good: "GitHub Didn't Break Today. Its Model Vendor Did."
+- Bad: "GitHub Copilot Outage: Lessons for AI Architecture"
 
 The dek does the explaining. The headline earns the click and states a position.
