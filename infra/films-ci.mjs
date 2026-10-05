@@ -48,6 +48,13 @@ const remote = await run("git", ["remote", "get-url", "origin"], { json: false }
 const repo = (remote.match(/github\.com[:/]([^/]+\/[^/]+?)(\.git)?$/) || [])[1];
 if (!repo) throw new Error(`origin (${remote}) is not a GitHub repository`);
 
+// The token's subject names the repository as GitHub is set to: by name
+// (repo:owner/name) or, with immutable subjects, by id (repo:owner@id/name@id).
+// Ask rather than assume, or the role trusts a subject no token carries.
+const subCfg = await run("gh", ["api", `repos/${repo}/actions/oidc/customization/sub`]);
+if (!subCfg.use_default) throw new Error(`${repo} uses a custom OIDC subject template (${JSON.stringify(subCfg.include_claim_keys)}); the trust policy below assumes the default`);
+const subPrefix = subCfg.use_immutable_subject && subCfg.sub_claim_prefix ? subCfg.sub_claim_prefix : `repo:${repo}`;
+
 const account = (await aws(["sts", "get-caller-identity"])).Account;
 const providerArn = `arn:aws:iam::${account}:oidc-provider/${OIDC_HOST}`;
 const providers = (await aws(["iam", "list-open-id-connect-providers"])).OpenIDConnectProviderList.map((p) => p.Arn);
@@ -65,7 +72,7 @@ const trust = {
     Condition: {
       StringEquals: {
         [`${OIDC_HOST}:aud`]: "sts.amazonaws.com",
-        [`${OIDC_HOST}:sub`]: `repo:${repo}:ref:refs/heads/main`,
+        [`${OIDC_HOST}:sub`]: `${subPrefix}:ref:refs/heads/main`,
       },
     },
   }],
