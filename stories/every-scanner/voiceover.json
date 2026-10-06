@@ -1,15 +1,15 @@
 {
- "source": "Probe All You want (cleaned) (aligned).wav",
- "duration": 224070,
- "aligned": "2026-10-05",
- "note": "Aligned by stories/tools/align.py: faster-whisper small.en word timestamps against script.md; 431 of 509 script words matched. Beat starts and cue times are ms from audio 0:00 / from the beat start. The take is 224.1 s; the film runs 224.1 s, so the voice is padded with silence.",
+ "source": "take (aligned).wav",
+ "duration": 224270,
+ "aligned": "2026-10-06",
+ "note": "Aligned by stories/tools/align.py: faster-whisper small.en word timestamps against script.md; 488 of 507 script words matched. Beat starts and cue times are ms from audio 0:00 / from the beat start. The take is 220.2 s; the film runs 224.3 s, so the voice is padded with silence.",
  "beats": [
   {
    "n": 0,
    "start": 0,
    "cues": {
-    "log": 800,
-    "fifty": 4420
+    "log": 170,
+    "fifty": 3480
    }
   },
   {
@@ -24,105 +24,105 @@
    "start": 13400,
    "cues": {
     "street": 250,
-    "cert": 5500,
-    "board": 8000,
-    "readers": 13160,
-    "seconds": 17050
+    "cert": 2790,
+    "board": 8600,
+    "readers": 12770,
+    "seconds": 16240
    }
   },
   {
    "n": 3,
-   "start": 35880,
+   "start": 35000,
    "cues": {
     "follow": 250,
-    "wpadmin": 1480,
-    "mat": 3810,
-    "shed": 7900,
-    "slot": 10080,
-    "old": 14300,
-    "dictionary": 19760
+    "wpadmin": 2270,
+    "mat": 6840,
+    "shed": 10750,
+    "slot": 13590,
+    "old": 19890,
+    "dictionary": 25210
    }
   },
   {
    "n": 4,
-   "start": 64610,
+   "start": 68000,
    "cues": {
     "city": 250,
-    "sessions": 2680,
-    "ips": 6430,
-    "la": 9700,
-    "unseen": 13290
+    "sessions": 3040,
+    "ips": 6330,
+    "la": 9790,
+    "unseen": 12970
    }
   },
   {
    "n": 5,
-   "start": 85130,
+   "start": 86830,
    "cues": {
     "key": 250,
-    "keys": 6430,
-    "lambdas": 9750,
-    "next": 14630,
-    "mining": 21220,
-    "ransom": 22250,
-    "prize": 25770
+    "keys": 10610,
+    "lambdas": 15230,
+    "next": 19660,
+    "mining": 25250,
+    "ransom": 26680,
+    "prize": 30870
    }
   },
   {
    "n": 6,
-   "start": 117810,
+   "start": 124500,
    "cues": {
     "scale": 250,
-    "eight": 4490,
-    "burst": 14960,
-    "host": 20600,
-    "tent": 23850,
-    "rope": 25350
+    "eight": 4610,
+    "burst": 13210,
+    "host": 17170,
+    "tent": 20860,
+    "rope": 22720
    }
   },
   {
    "n": 7,
-   "start": 148640,
+   "start": 152520,
    "cues": {
     "turn": 250,
-    "nothing": 2650
+    "nothing": 3360
    }
   },
   {
    "n": 8,
-   "start": 156840,
+   "start": 160520,
    "cues": {
     "slips": 250,
-    "cost": 4950
+    "cost": 6340
    }
   },
   {
    "n": 9,
-   "start": 166050,
+   "start": 169910,
    "cues": {
     "rewind": 250,
-    "files": 3010,
-    "storage": 9600,
-    "missing": 14160,
-    "shape": 18500
+    "files": 3450,
+    "storage": 9890,
+    "missing": 14660,
+    "shape": 19700
    }
   },
   {
    "n": 10,
-   "start": 190400,
+   "start": 194080,
    "cues": {
     "lane": 250,
-    "editor": 1050,
-    "asleep": 4410,
-    "notzero": 8830
+    "editor": 1940,
+    "asleep": 4430,
+    "notzero": 8190
    }
   },
   {
    "n": 11,
-   "start": 204510,
+   "start": 206000,
    "cues": {
     "weather": 250,
-    "open": 4140,
-    "end": 11390
+    "open": 5080,
+    "end": 11330
    }
   }
  ],
@@ -132,6 +132,6 @@
   "channels": 1,
   "sampleRate": 48000,
   "kbps": 48,
-  "from": "Probe All You want (cleaned) (aligned).wav"
+  "from": "take (aligned).wav"
  }
 }

@@ -22,7 +22,7 @@ move it uses.
 
 > ♪ hush
 
-{log} The morning we launched this site, nobody knew it existed. {fifty} Within minutes, there were 50 bots were at the door.
+{log} The morning we launched this site, nobody knew it existed. {fifty} Within minutes, there were 50 bots at the door.
 
 ## 01 Title
 
@@ -54,7 +54,7 @@ move it uses.
 
 {old} Bugs from before 2015 draw 4 times the exploit traffic of new bugs.
 
-{dictionary} It's not a threat model. It's a dictionary. And the bots check that list on your site it a few hundred times a day.
+{dictionary} It's not a threat model. It's a dictionary. And the bots check that list on your site a few hundred times a day.
 
 ## 04 The whole city
 
@@ -112,7 +112,7 @@ move it uses.
 
 > ♪ ledger 1.5
 
-{slips} Every probe gets the same cached answer: move along... that file isn't here. {cost} In Flat-Stack, that barely a rounding error.
+{slips} Every probe gets the same cached answer: move along... that file isn't here. {cost} In Flat-Stack, that's barely a rounding error.
 
 ## 09 The same night, emptied
 
