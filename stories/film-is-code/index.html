@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../lib/theme.js"></script>
+<title>The Film Is the Code</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="../lib/tokens.css">
+<link rel="stylesheet" href="../brand/tokens.css">
+<link rel="stylesheet" href="../lib/viewer.css">
+<link rel="stylesheet" href="../brand/viewer.css">
+</head>
+<body>
+<template id="info-content">
+  <h2>The Film Is the Code</h2>
+  <p>Rewritten as a film from the Report's article "The film is the code". The film sizes (540 MB at the kit's 9 Mbps export, about 85 KB of drawing code, 3 to 4 MB of voice, about 4 MB in all) were measured from our own story kit and the <em>every-scanner</em> film on 4 October 2026; the 150 MB web version assumes 2.5 Mbps. The delivery costs use CloudFront's North American list price. The street, the depot, the lorries, the towers and the couriers are a picture of how the bytes travel, not a diagram of any network; how many lorries go to which house is illustrative. The scorecard findings are from running the film's player against the Report's own flat-stack scorecard.</p>
+  <ul>
+    <li><a href="https://aws.amazon.com/cloudfront/pricing/pay-as-you-go/" target="_blank" rel="noopener">Amazon CloudFront pay-as-you-go pricing</a> · AWS, read 4 October 2026</li>
+    <li><a href="https://ymcinema.com/2022/03/17/vimeo-we-are-a-b2b-solution-not-the-indie-version-of-youtube/" target="_blank" rel="noopener">Vimeo: "We are a B2B solution, not the indie version of YouTube"</a> · YMCinema, 17 March 2022</li>
+    <li><a href="https://www.theverge.com/2022/3/15/22979126/vimeo-patreon-creators-price-increase" target="_blank" rel="noopener">Vimeo is telling creators to suddenly pay thousands of dollars</a> · The Verge, 15 March 2022</li>
+    <li><a href="https://heise.de/-11152120" target="_blank" rel="noopener">Layoffs at Vimeo after acquisition by Bending Spoons</a> · heise online</li>
+    <li><a href="https://techcrunch.com/2023/07/05/gfycat-shuts-down-on-september-1" target="_blank" rel="noopener">Gfycat shuts down on September 1</a> · TechCrunch, 5 July 2023</li>
+    <li><a href="https://blog.master.dev/youtube-embeds-are-bananas-heavy-and-its-fixable/" target="_blank" rel="noopener">YouTube Embeds are Bananas Heavy and it's Fixable</a> · Chris Coyier, 1 July 2024</li>
+    <li><a href="https://scale-to-zero.com/scorecard.html" target="_blank" rel="noopener">The flat-stack scorecard</a> · The Scale-to-Zero Report</li>
+  </ul>
+</template>
+<script type="module">
+  import { mountViewer } from '../lib/viewer.js';
+  import { BEATS, makeStory } from './story.js';
+  mountViewer({ slug: 'stz-film-is-code', title: 'The Film Is the Code', BEATS, makeStory }).catch((e) => {
+    console.error(e);
+    const p = document.createElement('p');
+    p.className = 'err'; p.textContent = `The story could not start: ${e.message}`;
+    document.body.appendChild(p);
+  });
+</script>
+</body>
+</html>

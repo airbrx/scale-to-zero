@@ -1,6 +1,16 @@
 {
   "stories": [
     {
+      "slug": "film-is-code",
+      "title": "The Film Is the Code",
+      "description": "A street of readers and a depot at the end of the road. A video play is a lorry carrying the whole file to the door, every time. Our films are a letter: the reader's browser folds the film out of it on their own table.",
+      "date": "2026-10-05",
+      "minutes": 3.2,
+      "thumbT": 100,
+      "article": "https://scale-to-zero.com/2026-10-06-the-film-is-the-code.html",
+      "articleTitle": "The Film Is the Code"
+    },
+    {
       "slug": "every-scanner",
       "title": "Probe All You Want",
       "description": "A street at night, in fog. Bots read the certificate log and try every door of a full-stack shop. Our site is a printed page: reach through its door and you grab nothing. The CDN just hands out \"not here\".",

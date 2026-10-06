@@ -16,7 +16,6 @@ docs/HARDENING.md
 articles/2026-09-03-instantdb-is-shutting-down.json
 articles/2026-09-04-every-scanner-assumes-you-run-wordpress.json
 #   draft films: a film of an unpublished article, and its gallery entry
-stories/film-is-code/
 stories/manifest.local.json
 
 # Build output, regenerated from source:
