@@ -115,7 +115,9 @@ take_s = len(audio) / 16000
 names = sorted({w for _, w in words if re.search(r"[A-Z0-9]", w[1:]) or (w[:1].isupper() and len(w) > 2)})
 prompt = ", ".join(names)[:600]
 model = WhisperModel("small.en", device="cpu", compute_type="int8")
-segs, _ = model.transcribe(audio, language="en", word_timestamps=True, initial_prompt=prompt, vad_filter=False)
+segs, _ = model.transcribe(audio, language="en", word_timestamps=True, initial_prompt=prompt, vad_filter=False,
+                           # conditioned on its own last words, Whisper can skip a whole phrase of a long take
+                           condition_on_previous_text=False)
 heard = [(w.word.strip(), w.start, w.end) for s in segs for w in s.words]
 if not heard:
     sys.exit("align: Whisper heard no words in the take")
@@ -191,21 +193,38 @@ decl = json.loads(subprocess.run(["node", "-e", f"import('{(film / 'story.js').a
 # inserted just before the next beat, and everything after moves along. The
 # take with the room in it is written beside the original and becomes the
 # voice; the original is never touched.
+def quiet(at):
+    """The middle of the silence at or before `at`. Whisper can start a word
+    late, and a soft onset ("h", "s") sits under the voiced threshold, so a
+    cut at the word's start can clip it; the middle of the gap never does."""
+    i = min(int(at * 100), len(voiced) - 1)
+    while i > 0 and voiced[i]:
+        i -= 1
+    a, b = i, i
+    while a > 0 and not voiced[a - 1]:
+        a -= 1
+    while b + 1 < len(voiced) and not voiced[b + 1]:
+        b += 1
+    return (a + b + 1) / 200
+
 inserts = []
 for bi in range(len(beats) - 1):
     have = bstart[bi + 1] - bstart[bi]
     want = decl[str(beats[bi]["n"])].get("min", 0)
     if have < want - 0.05:
-        inserts.append((bstart[bi + 1], round(want - have + 0.2, 2)))
+        inserts.append((max(bstart[bi], quiet(bstart[bi + 1])), round(want - have + 0.2, 2), bi))
 if inserts:
-    shift = lambda t: t + sum(s for at, s in inserts if t >= at - 1e-6)
+    shift = lambda t: t + sum(s for at, s, _ in inserts if t >= at - 1e-6)
     start = [shift(t) for t in start]; end = [shift(t) for t in end]
-    bstart = [shift(t) for t in bstart]
+    # Beats move by index, not time: a wordless beat can share its start with
+    # the next (the next's first word begun back in the silence), and the
+    # room made for it has to land after it, not before it.
+    bstart = [t + sum(s for _, s, b in inserts if b < k) for k, t in enumerate(bstart)]
     heard = [(w, shift(s), shift(e)) for w, s, e in heard]
     rate = int(subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=sample_rate", "-of", "csv=p=0", str(take)],
                               capture_output=True, text=True, check=True).stdout.strip())
     parts, chain, last_at = [], [], 0.0
-    for k, (at, secs) in enumerate(inserts):
+    for k, (at, secs, _) in enumerate(inserts):
         parts.append(f"[0:a]atrim={last_at}:{at},asetpts=PTS-STARTPTS[p{k}]")
         parts.append(f"anullsrc=r={rate}:cl=mono,atrim=0:{secs}[s{k}]")
         chain += [f"[p{k}]", f"[s{k}]"]
@@ -215,8 +234,8 @@ if inserts:
     graph = ";".join(parts) + ";" + "".join(chain) + f"concat=n={len(chain)}:v=0:a=1[o]"
     roomy = take.with_name(take.stem + " (aligned).wav")
     subprocess.run(["ffmpeg", "-nostdin", "-y", "-hide_banner", "-loglevel", "error", "-i", str(take), "-filter_complex", graph, "-map", "[o]", "-ac", "1", "-c:a", "pcm_s24le", str(roomy)], check=True)
-    take_s += sum(s for _, s in inserts)
-    for at, secs in inserts:
+    take_s += sum(s for _, s, _ in inserts)
+    for at, secs, _ in inserts:
         print(f"align: {secs:.2f} s of silence before {at:.1f} s of the take, to give a beat its room")
     take = roomy
 out_beats, ends = [], []
@@ -232,7 +251,7 @@ for name, bi, g, mode, pause in cues:
     out_beats[bi]["cues"][name] = round((t - bstart[bi]) * 1000)
     ends.append(t + decl[str(beats[bi]["n"])]["cues"][name])
 
-need = max([take_s, end[-1] + 4.5] + ends)
+need = max([take_s, end[-1] + 4.5, bstart[-1] + decl[str(beats[-1]["n"])].get("min", 0)] + ends)
 vo = {
     "source": take.name,
     "duration": round(need * 1000),

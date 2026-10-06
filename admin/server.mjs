@@ -12,8 +12,11 @@
 // email is on the admin list. There is no dev bypass, no "auth disabled when
 // unconfigured" path, and no route that reads an identity out of a request body.
 
-import { readFile } from "node:fs/promises";
+import { readFile, readdir, mkdtemp, rm } from "node:fs/promises";
 import { readFileSync } from "node:fs";
+import { execFile } from "node:child_process";
+import { tmpdir } from "node:os";
+import { promisify } from "node:util";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { timingSafeEqual, createHash } from "node:crypto";
@@ -30,6 +33,7 @@ import { validator } from "../shared/schema.mjs";
 import { compileRoutes, matchRoute, operationIds } from "./lib/routes.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+const execFileP = promisify(execFile);
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? "";
 const SESSION_SECRET = process.env.SESSION_SECRET ?? "";
 
@@ -387,14 +391,63 @@ const HANDLERS = {
     }), 200);
   },
 
-  // ---- films: what the build published to staging's films/, to attach to an article
-  // Locally (STZ_LOCAL=1) the list is the local build, stories/dist/films/, so
-  // a film can be attached and tried before it is pushed; see routeLocalSite.
+  // ---- films: what the build published to staging's films/, to attach to an article,
+  // then the drafts sent from the local admin (store.draftFilms).
+  // Locally (STZ_LOCAL=1) the list is the working tree's stories/, so a film
+  // can be attached and tried before it is pushed; see localFilms.
   listFilms: async () => {
-    const m = process.env.STZ_LOCAL === "1"
-      ? JSON.parse(await readFile(path.join(LOCAL_FILMS, "manifest.json"), "utf8").catch(missingAs('{"films":[]}')))
-      : await store.getJson("films/manifest.json", null);
-    return json(200, m?.films ?? []);
+    const onStaging = await store.draftFilms();
+    if (process.env.STZ_LOCAL === "1") {
+      return json(200, (await localFilms()).map((f) => (f.draft ? { ...f, local: true, onStaging: onStaging.includes(f.slug) } : f)));
+    }
+    const published = (await store.getJson("films/manifest.json", null))?.films ?? [];
+    const drafts = [];
+    for (const slug of onStaging.filter((s) => !published.some((f) => f.slug === s))) {
+      drafts.push(await store.getJson(`films/${slug}/draft.json`));
+    }
+    return json(200, [...published, ...drafts]);
+  },
+
+  // A command: build a draft film from this machine's stories/ and put it on
+  // staging. The marker goes first, so a CI sync from then on leaves the
+  // folder alone (.github/workflows/films.yml).
+  sendDraftFilm: async ({ params }) => {
+    const { slug } = params;
+    if (!SLUG_RE.test(slug)) throw new HttpError(400, `${slug} is not a film slug`);
+    if (process.env.STZ_LOCAL !== "1") {
+      throw new HttpError(409, "Draft films are sent from the local admin (npm run dev in admin/): the film is on that machine, not here.");
+    }
+    const published = (await store.getJson("films/manifest.json", null))?.films ?? [];
+    if (published.some((f) => f.slug === slug)) {
+      throw new HttpError(409, `${slug} is published from the repository by CI; push to main to change it.`);
+    }
+    const out = await mkdtemp(path.join(tmpdir(), "stz-draft-"));
+    try {
+      try {
+        await execFileP(process.execPath, [path.join(LOCAL_STORIES, "tools", "publish.mjs"), slug, "--out", out]);
+      } catch (err) {
+        const said = (err.stderr || err.message).trim().split("\n").slice(-3).join(" ");
+        throw new HttpError(409, `The build refused ${slug}: ${said}`);
+      }
+      const entry = JSON.parse(await readFile(path.join(out, "manifest.json"), "utf8")).films.find((f) => f.slug === slug);
+      if (!entry?.draft) {
+        throw new HttpError(409, `${slug} isn't a draft: a draft film is listed in stories/manifest.local.json. A film in stories/manifest.json goes to staging by a push to main.`);
+      }
+      await store.putJson(`films/${slug}/draft.json`, entry);
+      const files = await readdir(path.join(out, slug));
+      for (const f of files) {
+        const type = TYPES[f.split(".").pop()];
+        if (!type) throw new Error(`films/${slug}/${f}: no content type for .${f.split(".").pop()} in TYPES`);
+        await store.putBuffer(`films/${slug}/${f}`, await readFile(path.join(out, slug, f)), type);
+      }
+      for (const o of await store.list(`films/${slug}/`)) {
+        const name = o.key.slice(`films/${slug}/`.length);
+        if (name !== "draft.json" && !files.includes(name)) await store.remove(o.key);
+      }
+      return json(200, { ...entry, local: true, onStaging: true });
+    } finally {
+      await rm(out, { recursive: true, force: true });
+    }
   },
 
   deleteArticle: async ({ params, headers }) => {
@@ -497,6 +550,13 @@ const HANDLERS = {
 
   // A command: re-render, copy staging to live, invalidate.
   publish: async ({ actor }) => {
+    // A draft film never goes live (store.computeChangeset), so an article
+    // that plays one would go out with a card that cannot play.
+    const drafts = await store.draftFilms();
+    const playing = (await allArticles()).filter((a) => a.status === "published" && drafts.includes(a.film?.slug));
+    if (playing.length) {
+      throw new HttpError(409, `${playing.map((a) => `"${a.headline}" plays the draft film ${a.film.slug}`).join("; ")}, and draft films never go live. Commit the film (stories/), push it, and publish once CI has run; or take the film off the article.`);
+    }
     await rebuild();
     const changeset = await store.computeChangeset();
     const logs = [];
@@ -572,12 +632,38 @@ async function routeUi(pathname) {
 // LOCAL DEVELOPMENT ONLY, like routeUi. The admin renders pages into the
 // staging bucket, which nothing public reads; locally, this serves them back
 // (http://localhost:8080/<slug>.html) so a saved article can be looked at
-// before publishing, with /films/ from the local build (node
-// stories/tools/publish.mjs) since staging only has films once CI has run.
+// before publishing. /films/ and /stories/ are both the working tree's
+// stories/, nothing built: a film plays with whatever take is on disk now,
+// and /stories/ adds the gallery, the presenter and the docs. The build
+// (stories/tools/publish.mjs) is CI's, and the draft send's.
 // Byte ranges for the films, so a voice can be scrubbed.
-const LOCAL_FILMS = path.join(HERE, "..", "stories", "dist", "films");
+const LOCAL_STORIES = path.join(HERE, "..", "stories");
 // a file that isn't there is an answer (none built yet); any other failure is thrown
 const missingAs = (value) => (err) => { if (err.code === "ENOENT") return value; throw err; };
+
+// The films as publish.mjs would list them, read from the working tree: every
+// film in stories/manifest.json, then the drafts in manifest.local.json, that
+// has a voice. A film without one is left out, as the build leaves it out.
+async function localFilms() {
+  const readList = async (f, missing) => JSON.parse(await readFile(path.join(LOCAL_STORIES, f), "utf8").catch(missingAs(missing))).stories;
+  const entries = [
+    ...(await readList("manifest.json", undefined)),
+    ...(await readList("manifest.local.json", '{"stories":[]}')).map((s) => ({ ...s, draft: true })),
+  ];
+  const films = [];
+  for (const s of entries) {
+    const vo = JSON.parse(await readFile(path.join(LOCAL_STORIES, s.slug, "voiceover.json"), "utf8").catch(missingAs("null")));
+    if (!vo?.audio) continue;
+    films.push({
+      slug: s.slug, title: s.title, description: s.description ?? "", date: s.date ?? "",
+      durationSeconds: Math.round(vo.duration / 100) / 10,
+      ...(s.article ? { article: s.article } : {}),
+      ...(s.draft ? { draft: true } : {}),
+    });
+  }
+  films.sort((a, b) => (a.date < b.date ? 1 : -1));
+  return films.map(({ date, ...f }) => f);
+}
 const TYPES = { html: "text/html; charset=utf-8", css: "text/css; charset=utf-8", js: "text/javascript; charset=utf-8",
   json: "application/json; charset=utf-8", md: "text/markdown; charset=utf-8", svg: "image/svg+xml", png: "image/png",
   webp: "image/webp", jpg: "image/jpeg", ico: "image/x-icon", xml: "application/xml", txt: "text/plain; charset=utf-8",
@@ -585,12 +671,14 @@ const TYPES = { html: "text/html; charset=utf-8", css: "text/css; charset=utf-8"
 async function routeLocalSite(pathname, headers) {
   const rel = decodeURIComponent(pathname).replace(/^\/+/, "") || "index.html";
   if (rel.includes("..")) return { status: 400, headers: { "content-type": "text/plain" }, body: "bad path" };
-  const type = TYPES[rel.split(".").pop()] ?? "application/octet-stream";
-  const film = rel.startsWith("films/");
-  const buf = film
-    ? await readFile(path.join(LOCAL_FILMS, rel.slice("films/".length))).catch(missingAs(null))
-    : await store.getBuffer(rel);
-  if (!buf) return { status: 404, headers: { "content-type": "text/plain" }, body: film ? "not in stories/dist/films (run node stories/tools/publish.mjs)" : "not in staging" };
+  // the kit's pages load their neighbours by relative path, so a folder needs its slash
+  if (rel === "stories") return { status: 301, headers: { location: "/stories/" }, body: "" };
+  const kit = /^(films|stories)\//.exec(rel)?.[0];
+  const file = kit && rel.endsWith("/") ? rel + "index.html" : rel;
+  const type = TYPES[file.split(".").pop()] ?? "application/octet-stream";
+  const buf = kit ? await readFile(path.join(LOCAL_STORIES, file.slice(kit.length))).catch(missingAs(null))
+    : await store.getBuffer(file);
+  if (!buf) return { status: 404, headers: { "content-type": "text/plain" }, body: kit ? "not in stories/" : "not in staging" };
   const range = /^bytes=(\d*)-(\d*)$/.exec(headers.range ?? "");
   if (range) {
     const start = range[1] ? Number(range[1]) : Math.max(0, buf.length - Number(range[2]));

@@ -27,6 +27,8 @@ The tools need more, each only for what it does:
   `check.mjs --voice`.
 - Python 3 with `pip install faster-whisper numpy`: `align.py`. Its first
   run downloads the Whisper `small.en` model.
+- `pip install requests`, `FAL_KEY` in the environment and a cloned voice
+  id (`MINIMAX_VOICE_ID` or `--voice`): `tts.py`.
 
 Then open http://localhost:8090/stories/. The gallery reads `manifest.json`.
 In a story window, `p` opens the play tile (record, export MP4) and
@@ -61,6 +63,7 @@ stories/
   tools/crop.mjs         slices a contact sheet into rows, for reading it
   tools/align.py         a take -> <slug>/voiceover.json, with room where it's rushed
   tools/voice.mjs        a take -> <slug>/voiceover.m4a, named in voiceover.json
+  tools/tts.py           script.md -> a take in a cloned voice (fal), then align.py and voice.mjs
   tools/publish.mjs      every film with a voice -> dist/films/ (gitignored), as CI publishes it
   <slug>/
     script.md     every spoken word; the only copy
@@ -101,7 +104,10 @@ stories/
   script's clock, so the music moves with reading speed and with a
   recorded voiceover. `> ♪ silence` is a hard cut. Levels are balanced
   above 150 Hz, what a laptop plays.
-- **Mix.** The voice leads. A loaded voiceover is measured (LUFS, BS.1770),
+- **Mix.** The voice leads. The film's voice is measured once, when
+  `tools/voice.mjs` makes it (LUFS, BS.1770, and where it speaks, as spans
+  in `voiceover.json`'s `"level"`), so the player streams it and never
+  decodes it; a take loaded in the studio is measured on load. It is
   levelled to -16 LUFS, compressed and limited; the score comes up 6 dB to
   sit under it, ducks 11 dB while it speaks (with a 4 dB dip at 2.5 kHz so
   the words have room) and lifts after 0.8 s of silence. Live and in the
@@ -150,7 +156,45 @@ stories/
    It encodes AAC-LC, mono, 48 kHz, 48 kbps, index first (`voiceover.m4a`,
    ~2.9 MB for eight minutes), checks the alignment is for this take, and
    names the file in `voiceover.json` as `"audio"`. From then on the story
-   window plays that voice by default and the MP4 export uses it.
+   window plays that voice by default and the MP4 export uses it. It also
+  measures the encoded voice (`"level"`: its loudness and speech spans), which
+  the players need and the build checks for; `voice.mjs <slug> --measure`
+  re-measures a voice already made.
+
+   **Or let the cloned voice read it** (steps 4 and 5 in one):
+
+   ```
+   FAL_KEY=... python stories/tools/tts.py <slug> --voice <voice id> [--speed 1.0]
+   ```
+
+   It reads `script.md` as `timeline.js` does (no headings, `>` lines or
+   `{cues}`; `[pause N]` becomes N s of silence), has MiniMax Speech-02 HD
+   on fal read each paragraph in the cloned voice (~$0.10 per 1,000
+   characters: ~$0.30 for a four-minute film), joins the clips with a breath
+   between paragraphs and beats into `<slug>/tts/take.wav`, then runs
+   `align.py` and `voice.mjs` on it. Read the transcript beside the take
+   (`~` marks a script word Whisper didn't match) and listen before
+   committing.
+
+   - **Say it right.** Words a voice misreads (`.env`, `mailer.cgi`,
+     years, brand names) are respelled for the voice only, in `SAY` at the
+     top of `tts.py`; `script.md` keeps them as written. A new film's
+     jargon goes in that list before its first read. Preview what will be
+     said, free: `import tts` and print `tts.spoken()` of each block.
+   - **Letters as one word.** Spell letters as one capitalised word
+     (`dot ENV`, `mailer dot CGI`, `WP config`), never spaced out: "C D N"
+     comes out as three stiff words, "CDN" as one natural one. Acronyms
+     already in caps (`CDN`, `TLS`) need no entry at all.
+   - **Room is cut into silence.** When `align.py` adds room for a beat, it
+     inserts it in the middle of the pause before the next beat, not at the
+     next word's start, so a soft first sound ("Here's") is never clipped.
+   - **Re-reads are cheap.** Clips are cached in `<slug>/tts/clips/` by
+     their text, voice and speed, so editing one line re-reads only its
+     paragraph. Delete the folder to re-read everything.
+   - **The voice** is cloned once (fal `fal-ai/minimax/voice-clone`,
+     $1.50, from a clean sample of 10 s to 5 min) and reused by id. An id
+     never used for speech is deleted after 7 days.
+   - `tts/` is local, like every take: never committed.
 6. **Publish:** commit the film with its `voiceover.json` and `voiceover.m4a`
    (and its entry in `manifest.json`) and push to main. CI
    (`.github/workflows/films.yml`) runs `tools/publish.mjs`, which smoke-tests
@@ -159,6 +203,21 @@ stories/
    admin then lists the film under **Film** in the article editor; attach it,
    save, and the admin's publish takes it live with the article. Run
    `node stories/tools/publish.mjs` locally to see what CI will build.
+
+   **A draft film** (the film of an unpublished article) stays out of this
+   public repository: its folder and `manifest.local.json`, where its entry
+   goes, are gitignored, so CI never sees it. To try it in staging, run
+   the local admin (`npm run dev` in `admin/`). Then either press **Send to
+   staging** on the film's card in the gallery at
+   http://localhost:8080/stories/ (signed in with the admin's own sign-in),
+   or pick the film in the article's **Film** list (marked "draft") and
+   press **Send this draft to staging**. That builds it (`publish.mjs <slug>`) and uploads it to
+   `films/<slug>/` with a `draft.json` marker. CI's sync leaves a marked
+   film alone, and the site publish keeps it off the live site. It also
+   refuses to publish while a published article plays a draft film. When
+   the article ships, take the folder out of `.gitignore`, move the entry
+   into `manifest.json` and push. CI then replaces the folder and drops the
+   marker.
 
    In the article the film is an HTML card (`shared/render.mjs`, styled by
    `brand/embed.css`). Pressing play loads `lib/embed.js`, which plays the

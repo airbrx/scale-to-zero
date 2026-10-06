@@ -298,16 +298,45 @@ async function fillFilms(current) {
   if (current?.slug && !list.some((f) => f.slug === current.slug)) list.unshift({ ...current, missing: true });
   const sel = $("f-film");
   sel.innerHTML = '<option value="">none</option>' + list.map((f) =>
-    `<option value="${esc(f.slug)}">${esc(f.title)}${f.durationSeconds ? ` (${Math.floor(f.durationSeconds / 60)}:${String(Math.round(f.durationSeconds % 60)).padStart(2, "0")})` : ""}${f.missing ? " (no longer published)" : ""}</option>`).join("");
+    `<option value="${esc(f.slug)}">${esc(f.title)}${f.durationSeconds ? ` (${Math.floor(f.durationSeconds / 60)}:${String(Math.round(f.durationSeconds % 60)).padStart(2, "0")})` : ""}${f.draft ? " (draft)" : ""}${f.missing ? " (no longer published)" : ""}</option>`).join("");
   sel.value = current?.slug ?? "";
   sel._films = list;
+  showDraftFilm();
 }
+const selectedFilm = () => $("f-film")._films?.find((x) => x.slug === $("f-film").value);
 const chosenFilm = () => {
-  const f = $("f-film")._films?.find((x) => x.slug === $("f-film").value);
+  const f = selectedFilm();
   return f ? { slug: f.slug, title: f.title, durationSeconds: f.durationSeconds ?? null } : null;
 };
+// A draft film (the film of an unpublished article) is kept out of the public
+// repository, so CI never puts it on staging. The local admin, which has it
+// built, sends it: POST /films/{slug}/draft. It stays off the live site until
+// it is committed and CI publishes it.
+function showDraftFilm() {
+  const f = selectedFilm();
+  show($("draftFilm"), !!f?.draft);
+  if (!f?.draft) return;
+  show($("sendDraftFilm"), !!f.local);
+  $("draftFilmMeta").textContent = !f.local
+    ? "A draft: on staging, kept off the live site until the film is committed."
+    : f.onStaging ? "On staging. Send again after a new take or edit." : "Not on staging yet.";
+}
+$("sendDraftFilm").addEventListener("click", async () => {
+  const f = selectedFilm();
+  const btn = $("sendDraftFilm");
+  btn.disabled = true;
+  $("draftFilmMeta").textContent = "building and sending...";
+  try {
+    Object.assign(f, await auth.api(`/films/${encodeURIComponent(f.slug)}/draft`, { method: "POST" }));
+    showDraftFilm();
+  } catch (e) {
+    $("draftFilmMeta").textContent = `not sent: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+  }
+});
 $("f-template").addEventListener("change", () => { toggleAudio(); markDirty(); });
-$("f-film").addEventListener("change", markDirty);
+$("f-film").addEventListener("change", () => { markDirty(); showDraftFilm(); });
 for (const id of ["f-headline", "f-dek", "f-status", "f-date", "f-category", "f-angle",
   "f-src-title", "f-src-url", "f-src-pub", "f-src-fig", "f-src-disc", "f-pull"]) {
   $(id).addEventListener("input", markDirty);

@@ -423,14 +423,17 @@ Gallery is not built.
 ```bash
 cd admin
 npm install        # once: the AWS SDK and sharp, the same packages the Lambda bundle carries
-npm run dev        # builds the films, then serves everything on http://localhost:8080
+npm run dev        # serves everything on http://localhost:8080
 ```
 
 One server: the editor at `/admin/`, the API at `/api/`, the pages the admin
 renders (read back from the staging bucket, so a saved article can be opened as
-`/<slug>.html` before it is published), and `/films/` from the local build. The
-Film picker lists that local build too, so a film can be attached and played
-before it is pushed. `admin/local.mjs` loads the repository's `.env`, turns on
+`/<slug>.html` before it is published), and `/films/` straight from the
+working tree's `stories/`, with no build step, so a new take plays as soon as
+it is on disk. `/stories/` is the same folder with the gallery, the presenter
+and the docs. The Film picker lists the films there that have a voice, drafts
+in `stories/manifest.local.json` included, so a film can be attached and
+played before it is pushed. `admin/local.mjs` loads the repository's `.env`, turns on
 local mode and makes a `SESSION_SECRET` for the run (a sign-in lasts until the
 server stops); `PORT` changes the port. Sign-in needs `http://localhost:8080`
 among the OAuth client's authorized JavaScript origins.

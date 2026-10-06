@@ -63,14 +63,24 @@ export async function mountViewer({ slug, title, BEATS, makeStory }) {
 
   if (EMBED) {
     document.documentElement.classList.add('embed');
-    const tick = (now) => { drawFilm(cv, story, t, now, { live: false }); requestAnimationFrame(tick); };
-    requestAnimationFrame(tick);
+    // a still: drawn once, and again only when its size, the theme or the type changes
+    const paint = () => drawFilm(cv, story, t, performance.now(), { live: false });
+    paint();
+    addEventListener('resize', paint);
+    new MutationObserver(paint).observe(document.documentElement, { attributes: true });
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', paint);
+    document.fonts.ready.then(paint);
     return;
   }
 
   const errEl = $('err');
   const fail = (msg, e) => { console.error(`viewer: ${msg}`, e || ''); errEl.textContent = msg; errEl.hidden = false; clearTimeout(fail.h); fail.h = setTimeout(() => { errEl.hidden = true; }, 9000); };
   if (timingErr) fail(timingErr);
+  // the studio, served by the local admin: a draft film can be sent to staging from here (stage.js)
+  if (!document.documentElement.classList.contains('published')) {
+    import('./stage.js').then((m) => m.stagingButton({ beside: $('rec'), fail }))
+      .catch((e) => fail(`The staging button could not load: ${e.message}`, e));
+  }
 
   let playing = false, mode = null, holdUntil = 0, lastSend = 0, webm = null, cc = true, xp = null;
   try { cc = localStorage.getItem(CC_KEY) !== 'off'; } catch (e) { console.warn('viewer: localStorage unavailable', e); }
@@ -85,7 +95,7 @@ export async function mountViewer({ slug, title, BEATS, makeStory }) {
     if (!soundOn) return Promise.resolve();
     return sound.start(story.music).then(() => {
       sound.set('music', true); sound.set('fx', true);
-      if (audio.src) sound.attach(audio);
+      if (audio.src) sound.attach(audio, audioName === film.vo?.audio ? film.vo.level ?? null : null);
     }).catch((e) => fail(`Sound could not start: ${e.message}`, e));
   }
   function setSound(v) {
@@ -478,7 +488,8 @@ export async function mountViewer({ slug, title, BEATS, makeStory }) {
   const capEl = $('caption');
 
   /* ---- frame ---- */
-  let last = performance.now(), lastCap = null;
+  let last = performance.now(), lastCap = null, lastSig = null, lastStory = null;
+  const darkMedia = matchMedia('(prefers-color-scheme: dark)');
   function tick(now) {
     const dt = Math.min(.05, (now - last) / 1000); last = now;
     // an export has the main thread; the stage holds still until it ends
@@ -492,8 +503,15 @@ export async function mountViewer({ slug, title, BEATS, makeStory }) {
       }
       if (sync.leading() && now - lastSend > 500) { lastSend = now; sync.send(); }
     }
+    // Paused, it draws only when something it shows has changed (the time,
+    // the size, the theme, the captions): nothing runs while nobody's watching.
+    const html = document.documentElement;
+    const sig = playing || webm || holdUntil ? null : `${t}|${cv.clientWidth}|${html.className}|${html.dataset.theme}|${darkMedia.matches}|${cc}|${story === lastStory}`;
+    lastStory = story;
+    if (sig !== null && sig === lastSig) { paintBar(); requestAnimationFrame(tick); return; }
+    lastSig = sig;
     try {
-      const g = drawFilm(cv, story, t, now, { fixed: webm ? [1920, 1080] : null, rec: !!webm });
+      const g = drawFilm(cv, story, t, now, { fixed: webm ? [1920, 1080] : null, rec: !!webm, live: playing });
       sound.update(t, playing && !holdUntil, story);
       const text = cc ? captionAt(T, t) : '';
       if (webm) burnCaption(g, text, palette(now));

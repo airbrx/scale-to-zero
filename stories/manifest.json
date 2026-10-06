@@ -7,7 +7,6 @@
       "date": "2026-10-03",
       "minutes": 3.2,
       "thumbT": 126,
-      "status": "draft",
       "article": "https://scale-to-zero.com/2026-09-04-every-scanner-assumes-you-run-wordpress.html",
       "articleTitle": "Probe all you want, there's no compute here..."
     },
@@ -17,8 +16,7 @@
       "description": "How the Report's films are made, in their own material. It opens on the manifesto's ten rules folding a running application down to almost nothing; then one page becomes a street, a mill and a city, and the storytelling moves are shown, not told.",
       "date": "2026-10-03",
       "minutes": 1.4,
-      "thumbT": 14,
-      "status": "draft"
+      "thumbT": 14
     },
     {
       "slug": "model-vendor",
@@ -27,7 +25,6 @@
       "date": "2026-10-03",
       "minutes": 1.5,
       "thumbT": 17,
-      "status": "draft",
       "article": "https://scale-to-zero.com/2026-09-03-github-didnt-break-its-model-vendor-did.html",
       "articleTitle": "GitHub Didn't Break Today. Its Model Vendor Did."
     }

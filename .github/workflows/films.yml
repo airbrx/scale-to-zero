@@ -59,17 +59,30 @@ jobs:
       # taken out of the repository leaves staging too. The
       # cache headers match what the admin writes (admin/lib/store.mjs), and
       # its publish copies them to live unchanged.
+      #
+      # Except draft films: a film of an unpublished article stays out of this
+      # public repository, and the local admin sends it to staging with a
+      # films/<slug>/draft.json marker. A marked folder the build doesn't have
+      # is left alone. Once the film is committed the build has it, so the
+      # sync replaces the folder and deletes the marker. The slugs are never
+      # printed: this log is public.
       - name: Sync to staging films/
         env:
           STAGING_BUCKET: ${{ vars.STAGING_BUCKET }}
         run: |
+          # an assignment, so a failed listing stops the job (bash -e)
+          keys=$(aws s3api list-objects-v2 --bucket "${STAGING_BUCKET}" --prefix films/ --query "Contents[].Key" --output text)
+          keep=()
+          for slug in $(tr '\t' '\n' <<< "${keys}" | awk -F/ 'NF == 3 && $3 == "draft.json" { print $2 }'); do
+            [ -d "stories/dist/films/${slug}" ] || keep+=(--exclude "${slug}/*")
+          done
           aws s3 sync stories/dist/films "s3://${STAGING_BUCKET}/films" --delete --only-show-errors \
             --cache-control "public, max-age=300, s-maxage=31536000" \
-            --exclude "*.js" --exclude "*.md"
+            --exclude "*.js" --exclude "*.md" "${keep[@]}"
           aws s3 sync stories/dist/films "s3://${STAGING_BUCKET}/films" --delete --only-show-errors \
             --cache-control "public, max-age=300, s-maxage=31536000" \
-            --exclude "*" --include "*.js" --content-type "text/javascript; charset=utf-8"
+            --exclude "*" --include "*.js" --content-type "text/javascript; charset=utf-8" "${keep[@]}"
           aws s3 sync stories/dist/films "s3://${STAGING_BUCKET}/films" --delete --only-show-errors \
             --cache-control "public, max-age=300, s-maxage=31536000" \
-            --exclude "*" --include "*.md" --content-type "text/markdown; charset=utf-8"
+            --exclude "*" --include "*.md" --content-type "text/markdown; charset=utf-8" "${keep[@]}"
           echo "films synced to staging. Publish from the admin to take them live."

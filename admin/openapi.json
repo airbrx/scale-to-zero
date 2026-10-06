@@ -690,6 +690,16 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "A published article plays a draft film, which never goes live; commit the film and push it, or take it off the article.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -701,7 +711,7 @@
           "films"
         ],
         "summary": "The films that can be attached to an article",
-        "description": "Every film the build published to the staging bucket's films/ (stories/, on each push to main). Empty when none has been published yet.",
+        "description": "Every film the build published to the staging bucket's films/ (stories/, on each push to main), then the drafts sent to staging from the local admin (draft: true). Locally, the films built on this machine (stories/dist/films/), drafts included. Empty when none has been published yet.",
         "responses": {
           "200": {
             "description": "Newest first.",
@@ -715,6 +725,49 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/films/{slug}/draft": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/slug"
+        }
+      ],
+      "post": {
+        "operationId": "sendDraftFilm",
+        "tags": [
+          "films"
+        ],
+        "summary": "Build a draft film on this machine and put it on staging (a command; local admin only)",
+        "description": "A film of an unpublished article is kept out of the public repository (.gitignore), so CI never sees it. This builds it from the working tree (stories/tools/publish.mjs <slug>) and uploads it to films/<slug>/ in staging with a films/<slug>/draft.json marker. CI leaves marked films alone, and the site publish keeps them off the live site until the film is committed. Sending again replaces it.",
+        "responses": {
+          "200": {
+            "description": "On staging.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilmSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "Not possible here: the deployed admin has no working tree, the film is already published by CI, it is not a draft (stories/manifest.local.json), or the build refused it (no voice yet, or the smoke test failed).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1658,6 +1711,18 @@
           "article": {
             "type": "string",
             "description": "The URL of the article it was made from, if any."
+          },
+          "draft": {
+            "type": "boolean",
+            "description": "A film of an unpublished article: sent from the local admin, not by CI. Kept off the live site."
+          },
+          "local": {
+            "type": "boolean",
+            "description": "Built on this machine (local admin only), so it can be sent to staging."
+          },
+          "onStaging": {
+            "type": "boolean",
+            "description": "For a local draft: whether staging has it yet."
           }
         }
       },

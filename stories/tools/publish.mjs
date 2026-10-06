@@ -16,7 +16,11 @@
 // voiceover.json naming its audio (tools/voice.mjs) is refused; with no names,
 // films without one are skipped and listed. Every film built runs the smoke
 // test (check.mjs) first; any failure stops the build. Its title, description
-// and article come from stories/manifest.json, which must list it.
+// and article come from stories/manifest.json, which must list it, or from
+// stories/manifest.local.json for a draft: the film of an unpublished article,
+// gitignored with its folder, so only built on this machine. A draft is marked
+// "draft": true in the built manifest; the admin sends it to staging
+// (POST /films/{slug}/draft), since CI never sees it.
 //
 // In each film's page: <html class="published"> hides the Record and
 // Presenter controls (brand/viewer.css), the noindex line is dropped, and the
@@ -39,6 +43,11 @@ const readJson = async (p) => JSON.parse(await readFile(p, "utf8"));
 
 if (!(await exists(path.join(root, "lib", "viewer.js")))) die("stories/lib is missing");
 const listed = new Map((await readJson(path.join(root, "manifest.json"))).stories.map((s) => [s.slug, s]));
+const localPath = path.join(root, "manifest.local.json");
+for (const s of (await exists(localPath)) ? (await readJson(localPath)).stories : []) {
+  if (listed.has(s.slug)) die(`${s.slug} is in both manifest.json and manifest.local.json; a published film is only in manifest.json`);
+  listed.set(s.slug, { ...s, draft: true });
+}
 
 /* ---- which films ---- */
 async function voiceOf(slug) {
@@ -47,6 +56,7 @@ async function voiceOf(slug) {
   const vo = await readJson(voPath);
   if (!vo.audio) return { why: "voiceover.json names no audio (tools/voice.mjs)" };
   if (!(await exists(path.join(root, slug, vo.audio)))) return { why: `voiceover.json names ${vo.audio}, which isn't there` };
+  if (!vo.level?.speech) return { why: `voiceover.json has no level: the player doesn't decode the voice, so it needs one (node stories/tools/voice.mjs ${slug} --measure)` };
   return { vo };
 }
 const candidates = named.length ? named
@@ -56,7 +66,7 @@ for (const slug of candidates) {
   if (!(await exists(path.join(root, slug, "story.js")))) { if (named.length) die(`no film at ${path.join(root, slug)}`); continue; }
   const { vo, why } = await voiceOf(slug);
   if (!vo) { if (named.length) die(`${slug}: ${why}`); console.log(`publish: skipping ${slug}: ${why}`); continue; }
-  if (!listed.has(slug)) die(`${slug} has a voice but no entry in stories/manifest.json (its title and description)`);
+  if (!listed.has(slug)) die(`${slug} has a voice but no entry in stories/manifest.json, or manifest.local.json for a draft (its title and description)`);
   films.push({ slug, vo });
 }
 if (!films.length) die("no film has a voice yet, so there is nothing to publish");
@@ -72,7 +82,7 @@ const out = path.resolve(outArg || path.join(root, "dist", "films"));
 await rm(out, { recursive: true, force: true });
 await mkdir(out, { recursive: true });
 const SHARED = {
-  lib: (f) => !/^presenter\./.test(f),
+  lib: (f) => !/^presenter\./.test(f) && f !== "stage.js",   // stage.js: the studio's Send to staging
   brand: (f) => f !== "looks" && !/^presenter\./.test(f),
   score: () => true,
   vendor: () => true,
@@ -103,6 +113,7 @@ for (const { slug, vo } of films) {
     slug, title: m.title, description: m.description ?? "", date: m.date ?? "",
     durationSeconds: Math.round(vo.duration / 100) / 10,
     ...(m.article ? { article: m.article } : {}),
+    ...(m.draft ? { draft: true } : {}),
   });
 }
 manifest.sort((a, b) => (a.date < b.date ? 1 : -1));

@@ -2,7 +2,8 @@
 //
 // One server on http://localhost:8080 (PORT to change it): the editor at
 // /admin/, the API at /api/, the pages the admin renders (read back from the
-// staging bucket), and /films/ from the local build. Same router and auth as
+// staging bucket), and /films/ and /stories/ straight from the working tree's
+// stories/, nothing built first. Same router and auth as
 // the Lambda, against the real buckets named in the repo's .env, with your
 // AWS CLI credentials. There is no offline mode: saving writes staging.
 //

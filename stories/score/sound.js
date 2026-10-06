@@ -44,7 +44,7 @@
    (MIT, licence beside it), served from the same place as the film, so no
    one else's server is part of the page. */
 
-import { lufs, speechMap } from './loudness.js';
+import { lufs, speechMap, speakingFrom } from './loudness.js';
 
 const TONE_URL = new URL('../vendor/tone-14.8.49.js', import.meta.url).href;
 let toneLoading = null;
@@ -482,6 +482,8 @@ function levelVoice(A, buffer) {
 export function createSound() {
   let Tone = null, A = null, dest = null, starting = null, lastT = null, playing = false, cur = null, seen = null;
   let voiceEl = null, voiceSrc = '', voice = null, wasSpeaking = null;
+  // the film's own voice comes measured (voiceover.json "level", tools/voice.mjs): no decoding here
+  let level = null;
   const on = { music: true, fx: true };
 
   function silence() {
@@ -492,7 +494,15 @@ export function createSound() {
     A.st.swarm = 0; A.st.tick = 0;
   }
 
-  // measure the voiceover the <audio> is playing; the file is already a blob in the page
+  // the voice as measured when it was made: its loudness sets the gain, its spans the duck
+  function applyLevel() {
+    voice = { measured: level.lufs, gainDb: A.st.mix.voice - level.lufs, speaking: speakingFrom(level.speech, { hold: A.st.mix.gap }), mix: A.st.mix };
+    A.voiceIn.gain.value = dbToGain(voice.gainDb);
+    A.musicSwitch.volume.value = A.st.mix.bed;   // the score comes up to sit under a voice
+  }
+
+  // A take loaded in the studio has no measurement: fetch and decode it to
+  // measure it, the whole file, once. Readers never come here.
   function analyse() {
     voiceSrc = voiceEl.currentSrc || voiceEl.src; voice = null;
     A.musicSwitch.volume.value = 0;
@@ -543,7 +553,8 @@ export function createSound() {
       if (c !== cur) { A.section(c.name, sc.sections[c.name], A.ctx.now(), cur === null, c.ease ? Math.max(0, c.t - t) : 0); cur = c; }
       levels(A, levelsAt(story, t), undefined, playing && on.fx);
       // the voiceover: a new file is measured; the score ducks while it speaks
-      if (voiceEl && (voiceEl.currentSrc || voiceEl.src) !== voiceSrc) analyse();
+      if (voiceEl && level) { if (voice?.mix !== A.st.mix) applyLevel(); }
+      else if (voiceEl && (voiceEl.currentSrc || voiceEl.src) !== voiceSrc) analyse();
       const speaking = !!(voice && voiceEl && !voiceEl.paused && voice.speaking(voiceEl.currentTime));
       if (speaking !== wasSpeaking) { duckFor(A, speaking); wasSpeaking = speaking; }
       if (playing && on.fx && lastT !== null && t > lastT && t - lastT < .3 && story.sounds) {
@@ -554,10 +565,14 @@ export function createSound() {
     },
     stream: () => (dest ? dest.stream : null),
     /* Route an <audio> (the voiceover) through the voice chain, so the live
-       mix, a recording and the export all hear the same levelled voice. */
-    attach(audio) {
+       mix, a recording and the export all hear the same levelled voice.
+       `measured` is voiceover.json's "level" for the film's own voice
+       ({ lufs, speech }); without it (a take loaded in the studio) the
+       voice is fetched and measured here. */
+    attach(audio, measured = null) {
       if (!A) return;
       voiceEl = audio;
+      if (measured !== level) { level = measured; voice = null; voiceSrc = ''; }
       if (audio.__routed) return;
       const src = A.ctx.createMediaElementSource(audio);
       Tone.connect(src, A.voiceIn);

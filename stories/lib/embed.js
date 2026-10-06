@@ -9,7 +9,9 @@
    files, read here rather than applied to the page, so the article's CSS is
    never touched) and follows the site's light or dark setting. The voice is
    the clock while it plays; the score and the effects ride it. It draws only
-   while playing, or once after a seek, a resize or a theme change. */
+   while playing, or once after a seek, a resize or a theme change, and the
+   voice only streams: its level and its speech were measured when it was
+   made, so the reader's device never decodes it. */
 
 import { loadFilm, timelineFor, drawFilm } from './film.js';
 import { DEFAULT_WPM, fmt } from './timeline.js';
@@ -65,6 +67,8 @@ export async function mountFilm(fig) {
   const T = timelineFor(film, mod.BEATS, film.vo ? 'voiceover' : 'script', DEFAULT_WPM);
   const story = mod.makeStory(T);
   const lead = T.lead || 0;
+  // the voice's level and speech come measured (tools/voice.mjs); this player never decodes it
+  if (film.vo?.audio && !film.vo.level) throw new Error(`voiceover.json names ${film.vo.audio} but has no level (node stories/tools/voice.mjs <slug> --measure)`);
 
   /* ---- the stage and the bar ---- */
   const stage = fig.querySelector('.stz-film-stage');
@@ -87,6 +91,8 @@ export async function mountFilm(fig) {
   fig.tabIndex = 0;
 
   /* ---- the clock: the voice while it plays, the frame clock around it ---- */
+  // The voice streams; nothing decodes it here. Its loudness and where it
+  // speaks were measured when it was made (tools/voice.mjs, "level").
   const voice = film.vo?.audio ? new Audio(new URL(film.vo.audio, base).href) : null;
   if (voice) { voice.preload = 'auto'; voice.onerror = () => fail(`the voice (${film.vo.audio}) could not be played`); }
   let t = 0, playing = false, ended = false, captions = true, raf = 0, last = performance.now();
@@ -165,7 +171,7 @@ export async function mountFilm(fig) {
   try {
     await soundReady;
     sound.set('music', true); sound.set('fx', true);
-    if (voice) sound.attach(voice);
+    if (voice) sound.attach(voice, film.vo.level);
   } catch (e) {
     // the film still plays, voice and picture, without the score
     console.error(`film: the score could not start: ${e.message}`);

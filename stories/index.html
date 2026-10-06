@@ -78,6 +78,13 @@
   .theme-btn { background: none; border: 0; padding: 0 0 2px; font: inherit; color: var(--ink-soft); cursor: pointer; text-transform: inherit; letter-spacing: inherit; }
   .theme-btn:hover { color: var(--accent); border-bottom: 1px solid var(--accent); }
   .err { color: var(--accent); text-align: center; padding: 2rem; font-family: var(--serif); }
+  /* staging: only when the local admin serves this page (admin/: npm run dev) */
+  .staging { margin: 1rem auto 0; display: flex; gap: .8rem; justify-content: center; align-items: center; flex-wrap: wrap; font-family: var(--mono); font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-faint); }
+  .film-send { display: flex; gap: .7rem; align-items: baseline; flex-wrap: wrap; margin-top: .35rem; font-family: var(--mono); font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-faint); }
+  .film-send button { background: none; border: 1px solid var(--accent); color: var(--accent); font: inherit; text-transform: inherit; letter-spacing: inherit; padding: .25rem .6rem; cursor: pointer; }
+  .film-send button:hover:not(:disabled) { background: var(--accent); color: var(--card); }
+  .film-send button:disabled { border-color: var(--rule); color: var(--ink-faint); cursor: default; }
+  .film-send .is-err { color: var(--accent); text-transform: none; letter-spacing: 0; }
 </style>
 </head>
 <body>
@@ -90,6 +97,7 @@
     <a href="doc.html?doc=built">How they're built</a>
     <button class="theme-btn" id="theme" type="button"></button>
   </nav>
+  <div class="staging" id="staging" hidden><span id="stagingWho"></span><div id="stagingSignIn"></div></div>
 </header>
 
 <main class="shelf-wrap">
@@ -110,7 +118,8 @@
 </footer>
 
 <script>
-  (async () => {
+  // the films as listed, for the staging buttons below once they're on the shelf
+  window.shelfReady = (async () => {
     const shelf = document.getElementById('shelf');
     const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const day = (d) => new Date(`${d}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
@@ -145,27 +154,102 @@
       const { stories } = await res.json();
       // manifest.local.json (gitignored): films of articles not yet published, listed first
       const loc = await fetch(`manifest.local.json?r=${Date.now()}`);
-      if (loc.ok) stories.unshift(...(await loc.json()).stories);
+      if (loc.ok) stories.unshift(...(await loc.json()).stories.map((s) => ({ ...s, draft: true })));
       else if (loc.status !== 404) throw new Error(`manifest.local.json: HTTP ${loc.status}`);
       if (!stories.length) throw new Error('manifest.json lists no films');
+      // where each film stands, from the files rather than a field kept by hand:
+      // a draft (manifest.local.json) stays local; a film with a voice goes to
+      // staging on a push to main (CI); without one it is the script and drawing.
+      // Its length is the voice's, once there is one.
+      await Promise.all(stories.map(async (s) => {
+        const res = await fetch(`${s.slug}/voiceover.json`, { cache: 'no-cache' });
+        if (!res.ok && res.status !== 404) throw new Error(`${s.slug}/voiceover.json: HTTP ${res.status}`);
+        const vo = res.ok ? await res.json() : null;
+        if (vo?.audio) s.minutes = vo.duration / 60000;
+        s.state = s.draft ? 'draft' : vo?.audio ? 'on staging' : 'no voice yet';
+      }));
       shelf.innerHTML = stories.map((s, i) => `
-        <li class="film${i === 0 ? ' lead' : ''}">
+        <li class="film${i === 0 ? ' lead' : ''}" data-slug="${esc(s.slug)}"${s.draft ? ' data-draft' : ''}>
           <a class="film-thumb" href="${s.slug}/index.html" aria-label="Play ${esc(s.title)}">
             <iframe src="${s.slug}/index.html?embed&t=${s.thumbT || 0}" scrolling="no" tabindex="-1" loading="lazy" title="${esc(s.title)}"></iframe>
           </a>
           <div class="film-body">
-            <div class="film-kicker"><span>${esc(day(s.date))}</span>${s.minutes ? `<span>${esc(length(s.minutes))}</span>` : ''}${s.status ? `<span class="film-status">${esc(s.status)}</span>` : ''}</div>
+            <div class="film-kicker"><span>${esc(day(s.date))}</span>${s.minutes ? `<span>${esc(length(s.minutes))}</span>` : ''}<span class="film-status">${esc(s.state)}</span></div>
             <h2 class="film-title"><a href="${s.slug}/index.html">${esc(s.title)}</a></h2>
             <p class="film-desc">${esc(s.description)}</p>
             ${s.articleTitle ? `<p class="film-re">re: ${esc(s.articleTitle)}</p>` : ''}
             <div class="film-links"><a href="${s.slug}/index.html">Play</a><a href="${s.slug}/presenter.html">Presenter</a><a href="${s.slug}/script.md">Script</a></div>
           </div>
         </li>`).join('');
+      return stories;
     } catch (e) {
       console.error(e);
       shelf.innerHTML = `<li class="err">The films could not load: ${esc(e.message)}</li>`;
+      return [];
     }
   })();
+</script>
+<script type="module">
+  /* Send a draft film to staging. A draft (manifest.local.json: the film of an
+     unpublished article) is kept out of the public repository, so CI never
+     puts it on staging; the local admin builds it and sends it
+     (POST /api/films/{slug}/draft, admin/server.mjs). That needs the admin,
+     signed in with its own sign-in (/admin/auth.js), so under a plain static
+     server this does nothing and the shelf is just the shelf. */
+  const cfgRes = await fetch('/admin/config.json');
+  if (!cfgRes.ok && cfgRes.status !== 404) throw new Error(`/admin/config.json: HTTP ${cfgRes.status}`);
+  const cfg = cfgRes.ok ? await cfgRes.json() : null;
+  if (cfg && !cfg.googleClientId) throw new Error('/admin/config.json has no googleClientId (docs/ADMIN.md)');
+  if (cfg) {
+    const auth = await import('/admin/auth.js');
+    const bar = document.getElementById('staging'), who = document.getElementById('stagingWho');
+    await window.shelfReady;
+    const drafts = [...document.querySelectorAll('.film[data-draft]')];
+
+    // each draft card gets a button and a line saying where it stands
+    for (const li of drafts) {
+      const row = document.createElement('div');
+      row.className = 'film-send';
+      row.innerHTML = '<button type="button" disabled>Send to staging</button><span>sign in to send</span>';
+      li.querySelector('.film-body').append(row);
+      const btn = row.querySelector('button'), say = row.querySelector('span');
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        say.className = ''; say.textContent = 'building and sending: about a minute';
+        try {
+          await auth.api(`/films/${encodeURIComponent(li.dataset.slug)}/draft`, { method: 'POST' });
+          say.textContent = `sent ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+          li.querySelector('.film-status').textContent = 'draft, on staging';
+        } catch (e) {
+          say.className = 'is-err'; say.textContent = `not sent: ${e.message}`;
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
+
+    // where each draft stands: the admin's film list (local films with a voice, drafts marked)
+    async function refresh() {
+      const films = new Map((await auth.api('/films')).map((f) => [f.slug, f]));
+      for (const li of drafts) {
+        const btn = li.querySelector('.film-send button'), say = li.querySelector('.film-send span');
+        const f = films.get(li.dataset.slug);
+        btn.disabled = !f;
+        say.className = '';
+        say.textContent = !f ? 'record, then align.py and voice.mjs' : f.onStaging ? 'send again after a new take' : 'press to try it on staging';
+        // one status, in the kicker: a draft is either only here or also on staging
+        li.querySelector('.film-status').textContent = !f ? 'draft, no voice yet' : f.onStaging ? 'draft, on staging' : 'draft, local only';
+      }
+    }
+
+    bar.hidden = !drafts.length;
+    await auth.init(cfg.googleClientId, (session, message) => {
+      who.textContent = session ? `staging: signed in as ${session.email}` : message ? `staging: ${message}` : 'staging: sign in to send drafts';
+      document.getElementById('stagingSignIn').hidden = !!session;
+      if (session) refresh().catch((e) => { who.textContent = `staging: the film list could not load: ${e.message}`; });
+    });
+    if (!auth.isSignedIn()) { who.textContent = 'staging: sign in to send drafts'; auth.renderButton(document.getElementById('stagingSignIn')); }
+  }
 </script>
 </body>
 </html>

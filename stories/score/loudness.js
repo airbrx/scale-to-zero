@@ -71,11 +71,13 @@ export function peakDb(chans) {
 
 /* Where a voice is speaking: RMS over 50 ms windows against a threshold
    set from the voice itself (18 dB under its loud windows), so a quiet
-   take and a hot one read the same. `lead` starts the duck before a
+   take and a hot one read the same. speechSpans() is the measurement, as
+   [start, end] seconds in the voice's own time: tools/voice.mjs stores it
+   in voiceover.json, so a reader's browser never decodes the voice to find
+   it. speakingFrom() reads spans back: `lead` starts the duck before a
    sentence; `hold` keeps it through pauses shorter than that, so the
-   music lifts only in a real gap. Returns speaking(t), t in the voice's
-   own seconds. */
-export function speechMap(chans, sr, { win = .05, lead = .25, hold = .8 } = {}) {
+   music lifts only in a real gap. */
+export function speechSpans(chans, sr, { win = .05 } = {}) {
   if (!Array.isArray(chans)) chans = [chans];
   const n = Math.floor(win * sr), count = Math.ceil(chans[0].length / n), rms = new Float32Array(count);
   for (let w = 0; w < count; w++) {
@@ -85,10 +87,23 @@ export function speechMap(chans, sr, { win = .05, lead = .25, hold = .8 } = {}) 
   }
   const sorted = Array.from(rms).filter((x) => x > 1e-5).sort((a, b) => a - b);
   const loud = sorted.length ? sorted[Math.floor(sorted.length * .9)] : 0, thr = loud * Math.pow(10, -18 / 20);
-  const on = rms.map((x) => (x > thr ? 1 : 0));
+  const spans = [];
+  for (let w = 0; w < count; w++) {
+    if (!(rms[w] > thr)) continue;
+    const last = spans[spans.length - 1];
+    if (last && last[1] === w) last[1] = w + 1; else spans.push([w, w + 1]);
+  }
+  return spans.map(([a, b]) => [Math.round(a * win * 1000) / 1000, Math.round(b * win * 1000) / 1000]);
+}
+export function speakingFrom(spans, { lead = .25, hold = .8 } = {}) {
   return (t) => {
-    const a = Math.max(0, Math.floor((t - hold) / win)), b = Math.min(count - 1, Math.floor((t + lead) / win));
-    for (let w = a; w <= b; w++) if (on[w]) return true;
-    return false;
+    // the first span that hasn't ended by t - hold; it speaks if it has started by t + lead
+    let lo = 0, hi = spans.length;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (spans[m][1] <= t - hold) lo = m + 1; else hi = m; }
+    return lo < spans.length && spans[lo][0] <= t + lead;
   };
+}
+/* Both at once, from samples: speaking(t), t in the voice's own seconds. */
+export function speechMap(chans, sr, { win = .05, lead = .25, hold = .8 } = {}) {
+  return speakingFrom(speechSpans(chans, sr, { win }), { lead, hold });
 }

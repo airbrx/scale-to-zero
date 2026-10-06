@@ -37,3 +37,7 @@ stories/tools/fonts/
 stories/tools/out/
 # the reader's copy of the films, built by stories/tools/publish.mjs
 stories/dist/
+
+# tts.py: cloned-voice takes and their clip cache, local like every take
+stories/**/tts/
+stories/tools/__pycache__/
