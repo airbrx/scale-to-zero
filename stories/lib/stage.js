@@ -28,7 +28,7 @@ export async function stagingButton({ beside, fail }) {
   const btn = document.createElement('button');
   btn.className = 'btn'; btn.type = 'button'; btn.id = 'stage';
   btn.textContent = 'Send to staging';
-  btn.title = "Build this draft film and put it on staging, kept off the live site until it's committed";
+  btn.title = 'Build this draft film and put it on staging; publishing its article in the admin takes it live';
   beside.before(btn);
   // Google's own button, the only sign-in it allows, in a card above the bar
   const card = document.createElement('div');

@@ -153,17 +153,18 @@ const SKIP_PREFIXES = ["admin/", "_internal/", "admins.json", "sitedata.json"];
 // A draft film: one sent from the local admin (POST /films/{slug}/draft)
 // rather than built by CI, because its article isn't published and the film
 // isn't in the public repository yet. films/<slug>/draft.json marks it; CI
-// leaves a marked film alone, and publish never takes it live. Once the film
-// is committed, CI's sync replaces the folder and deletes the marker.
+// leaves a marked film alone. Publish takes it live only with an article that
+// plays it (liveDrafts), and never copies the marker. Once the film is
+// committed, CI's sync replaces the folder and deletes the marker.
 const DRAFT_MARKER = /^films\/([^/]+)\/draft\.json$/;
 export const draftFilmSlugs = (objs) => objs.map((o) => DRAFT_MARKER.exec(o.key)?.[1]).filter(Boolean);
 export const draftFilms = async () => draftFilmSlugs(await list("films/", STAGING));
 
-export async function computeChangeset() {
+export async function computeChangeset({ liveDrafts = [] } = {}) {
   const [stagingObjs, liveObjs] = await Promise.all([list("", STAGING), list("", LIVE)]);
 
-  const drafts = draftFilmSlugs(stagingObjs).map((s) => `films/${s}/`);
-  const publishable = stagingObjs.filter((o) => ![...SKIP_PREFIXES, ...drafts].some((p) => o.key.startsWith(p)));
+  const held = draftFilmSlugs(stagingObjs).filter((s) => !liveDrafts.includes(s)).map((s) => `films/${s}/`);
+  const publishable = stagingObjs.filter((o) => !DRAFT_MARKER.test(o.key) && ![...SKIP_PREFIXES, ...held].some((p) => o.key.startsWith(p)));
   const liveMap = new Map(liveObjs.map((o) => [o.key, o]));
   const stagingMap = new Map(publishable.map((o) => [o.key, o]));
 

@@ -42,9 +42,9 @@ export async function list(prefix = "", bucket = STAGING) {
 const DRAFT_MARKER = /^films\/([^/]+)\/draft\.json$/;
 export const draftFilmSlugs = (objs) => objs.map((o) => DRAFT_MARKER.exec(o.key)?.[1]).filter(Boolean);
 export const draftFilms = async () => draftFilmSlugs(await list("films/"));
-export async function computeChangeset() {
-  const drafts = draftFilmSlugs(await list("films/")).map((s) => `films/${s}/`);
-  const skip = (k) => ["admin/", "_internal/", "admins.json", ...drafts].some((p) => k.startsWith(p));
+export async function computeChangeset({ liveDrafts = [] } = {}) {
+  const held = draftFilmSlugs(await list("films/")).filter((s) => !liveDrafts.includes(s)).map((s) => `films/${s}/`);
+  const skip = (k) => DRAFT_MARKER.test(k) || ["admin/", "_internal/", "admins.json", ...held].some((p) => k.startsWith(p));
   const upload = [...buckets.staging].filter(([k, v]) => !skip(k) && etag(buckets.live.get(k) ?? "") !== etag(v)).map(([k]) => k);
   const del = [...buckets.live.keys()].filter((k) => !skip(k) && !buckets.staging.has(k));
   return { upload, delete: del };

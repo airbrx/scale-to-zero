@@ -213,11 +213,11 @@ stories/
    or pick the film in the article's **Film** list (marked "draft") and
    press **Send this draft to staging**. That builds it (`publish.mjs <slug>`) and uploads it to
    `films/<slug>/` with a `draft.json` marker. CI's sync leaves a marked
-   film alone, and the site publish keeps it off the live site. It also
-   refuses to publish while a published article plays a draft film. When
-   the article ships, take the folder out of `.gitignore`, move the entry
-   into `manifest.json` and push. CI then replaces the folder and drops the
-   marker.
+   film alone. Attach it to its article and publish from the admin: the
+   film goes live with the article, nothing else to do. Until an article
+   that plays it is published, it stays on staging only. Committing it
+   (folder out of `.gitignore`, entry into `manifest.json`) is tidying, any
+   time after: CI then owns the folder and drops the marker.
 
    In the article the film is an HTML card (`shared/render.mjs`, styled by
    `brand/embed.css`). Pressing play loads `lib/embed.js`, which plays the

@@ -310,15 +310,15 @@ const chosenFilm = () => {
 };
 // A draft film (the film of an unpublished article) is kept out of the public
 // repository, so CI never puts it on staging. The local admin, which has it
-// built, sends it: POST /films/{slug}/draft. It stays off the live site until
-// it is committed and CI publishes it.
+// built, sends it: POST /films/{slug}/draft. Publishing an article that plays
+// it takes it live with the article.
 function showDraftFilm() {
   const f = selectedFilm();
   show($("draftFilm"), !!f?.draft);
   if (!f?.draft) return;
   show($("sendDraftFilm"), !!f.local);
   $("draftFilmMeta").textContent = !f.local
-    ? "A draft: on staging, kept off the live site until the film is committed."
+    ? "A draft film, on staging. Publishing this article takes it live with it."
     : f.onStaging ? "On staging. Send again after a new take or edit." : "Not on staging yet.";
 }
 $("sendDraftFilm").addEventListener("click", async () => {

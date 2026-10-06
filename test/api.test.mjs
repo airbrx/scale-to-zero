@@ -190,8 +190,8 @@ const done = await call("POST", "/publish");
 t("publish copies to live", [done.status, mem.__keys("live").includes(`${slug}.html`), done.json.by], [200, true, OWNER]);
 
 // -------------------------------------------------------------- draft films
-// CI's films, then a draft sent from the local admin: listed, kept off live,
-// and an article that plays one cannot be published.
+// CI's films, then a draft sent from the local admin: listed, kept off live
+// until a published article plays it, then live with it (but not its marker).
 await mem.putJson("films/manifest.json", { films: [{ slug: "public-one", title: "Public" }] });
 await mem.putText("films/public-one/index.html", "<p>p</p>");
 await mem.putJson("films/draft-one/draft.json", { slug: "draft-one", title: "Draft", draft: true });
@@ -199,12 +199,11 @@ await mem.putText("films/draft-one/index.html", "<p>d</p>");
 t("films lists CI's, then the drafts", (await call("GET", "/films")).json.map((f) => [f.slug, !!f.draft]), [["public-one", false], ["draft-one", true]]);
 const filmPreview = (await call("GET", "/publish")).json.upload;
 t("a draft film is not in the changeset", [filmPreview.includes("films/public-one/index.html"), filmPreview.some((k) => k.startsWith("films/draft-one/"))], [true, false]);
+t("a draft nothing published plays stays off live", [(await call("POST", "/publish")).status, mem.__keys("live").some((k) => k.startsWith("films/draft-one/"))], [200, false]);
 await call("PATCH", `/articles/${slug}`, { body: { film: { slug: "draft-one", title: "Draft" } } });
-const blocked = await call("POST", "/publish");
-t("publishing an article that plays a draft film is refused", [blocked.status, /draft film draft-one/.test(blocked.json.error)], [409, true]);
-await call("PATCH", `/articles/${slug}`, { body: { film: null } });
-t("…and goes once the film is off it", (await call("POST", "/publish")).status, 200);
-t("the draft film never reached live", mem.__keys("live").some((k) => k.startsWith("films/draft-one/")), false);
+const withFilm = await call("POST", "/publish");
+t("an article that plays a draft takes it live", [withFilm.status, mem.__keys("live").includes("films/draft-one/index.html")], [200, true]);
+t("…without its draft marker", mem.__keys("live").includes("films/draft-one/draft.json"), false);
 t("drafts are sent from the local admin only", (await call("POST", "/films/draft-one/draft")).status, 409);
 
 // ------------------------------------------------------------------ delete

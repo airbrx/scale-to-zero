@@ -690,16 +690,6 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
-          },
-          "409": {
-            "description": "A published article plays a draft film, which never goes live; commit the film and push it, or take it off the article.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
           }
         }
       }
@@ -741,7 +731,7 @@
           "films"
         ],
         "summary": "Build a draft film on this machine and put it on staging (a command; local admin only)",
-        "description": "A film of an unpublished article is kept out of the public repository (.gitignore), so CI never sees it. This builds it from the working tree (stories/tools/publish.mjs <slug>) and uploads it to films/<slug>/ in staging with a films/<slug>/draft.json marker. CI leaves marked films alone, and the site publish keeps them off the live site until the film is committed. Sending again replaces it.",
+        "description": "A film of an unpublished article is kept out of the public repository (.gitignore), so CI never sees it. This builds it from the working tree (stories/tools/publish.mjs <slug>) and uploads it to films/<slug>/ in staging with a films/<slug>/draft.json marker. CI leaves marked films alone, and the site publish takes one live with the first published article that plays it. Sending again replaces it.",
         "responses": {
           "200": {
             "description": "On staging.",
@@ -1714,7 +1704,7 @@
           },
           "draft": {
             "type": "boolean",
-            "description": "A film of an unpublished article: sent from the local admin, not by CI. Kept off the live site."
+            "description": "A film of an unpublished article: sent from the local admin, not by CI. Live only once a published article plays it."
           },
           "local": {
             "type": "boolean",

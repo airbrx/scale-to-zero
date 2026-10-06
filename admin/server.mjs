@@ -160,6 +160,15 @@ async function allArticles() {
  * save: the whole site is a handful of small files, and the alternative is
  * partial rebuilds that drift out of sync with the index and the feeds.
  */
+// The draft films a published article plays: they go live with it. A draft
+// nothing published plays stays on staging only.
+async function draftsGoingLive() {
+  const drafts = await store.draftFilms();
+  return [...new Set((await allArticles())
+    .filter((a) => a.status === "published" && drafts.includes(a.film?.slug))
+    .map((a) => a.film.slug))];
+}
+
 async function rebuild() {
   const { site, tax, manifesto } = await loadConfigBundle();
   // Pages link style.css?v=<version>. Early deploys served the stylesheet as
@@ -546,19 +555,13 @@ const HANDLERS = {
   },
 
   // ---- publish
-  previewPublish: async () => json(200, await store.computeChangeset()),
+  previewPublish: async () => json(200, await store.computeChangeset({ liveDrafts: await draftsGoingLive() })),
 
-  // A command: re-render, copy staging to live, invalidate.
+  // A command: re-render, copy staging to live, invalidate. A draft film goes
+  // live with the first published article that plays it.
   publish: async ({ actor }) => {
-    // A draft film never goes live (store.computeChangeset), so an article
-    // that plays one would go out with a card that cannot play.
-    const drafts = await store.draftFilms();
-    const playing = (await allArticles()).filter((a) => a.status === "published" && drafts.includes(a.film?.slug));
-    if (playing.length) {
-      throw new HttpError(409, `${playing.map((a) => `"${a.headline}" plays the draft film ${a.film.slug}`).join("; ")}, and draft films never go live. Commit the film (stories/), push it, and publish once CI has run; or take the film off the article.`);
-    }
     await rebuild();
-    const changeset = await store.computeChangeset();
+    const changeset = await store.computeChangeset({ liveDrafts: await draftsGoingLive() });
     const logs = [];
     const result = await store.publish(changeset, (m) => logs.push(m));
     return json(200, { ...result, logs, by: actor.email });
