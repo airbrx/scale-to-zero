@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Creates the edge resources the distribution will reference: two response
+// Creates the edge resources the distribution will reference: three response
 // headers policies and the /admin* URI-rewrite function.
 //
 //   node infra/wire-edge.mjs
@@ -42,6 +42,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const REGION = "us-east-1";
 
 const SITE_POLICY = "stz-site-headers";
+const GAMES_POLICY = "stz-games-headers";
 const ADMIN_POLICY = "stz-admin-headers";
 const REWRITE_FN = "stz-admin-rewrite";
 
@@ -85,6 +86,29 @@ const SITE_CSP = [
   "form-action 'none'",
 ].join("; ");
 
+// /games/*: the public site's policy with three relaxations, each load-bearing
+// for the peer-to-peer game (assets/yahtzee/):
+//   connect-src wss:     Trystero finds the other players through public Nostr
+//                        relays, chosen at random from its list
+//   blob: images/media   shared photos and GIFs are shown from blob: URLs, and
+//                        so is the player's own camera preview
+//   camera, microphone   allowed for this origin only, on these pages only
+// WebRTC itself is not governed by CSP, so the peer connections need nothing.
+const GAMES_CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self'",
+  "img-src 'self' data: blob:",
+  "media-src 'self' blob:",
+  "font-src 'self'",
+  "connect-src 'self' wss:",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'none'",
+].join("; ");
+const GAMES_PERMISSIONS_POLICY = "camera=(self), microphone=(self), geolocation=(), payment=(), usb=()";
+
 // Looser by necessity, and every relaxation below is load-bearing:
 //   accounts.google.com  GIS client script, its injected stylesheet, its iframe
 //   'unsafe-inline' style  CKEditor injects element styles at runtime
@@ -102,9 +126,9 @@ const ADMIN_CSP = [
   "frame-ancestors 'none'",
 ].join("; ");
 
-function policyConfig({ name, comment, csp, coop }) {
+function policyConfig({ name, comment, csp, coop, permissions = PERMISSIONS_POLICY }) {
   const custom = [
-    { Header: "Permissions-Policy", Value: PERMISSIONS_POLICY, Override: true },
+    { Header: "Permissions-Policy", Value: permissions, Override: true },
     // Report-only: sent as a custom header because SecurityHeadersConfig can
     // only emit the enforcing Content-Security-Policy.
     { Header: "Content-Security-Policy-Report-Only", Value: csp, Override: true },
@@ -166,6 +190,12 @@ const siteId = await upsertPolicy(policyConfig({
   comment: "Public site: strict CSP (report-only), HSTS, nosniff, DENY framing",
   csp: SITE_CSP,
 }));
+const gamesId = await upsertPolicy(policyConfig({
+  name: GAMES_POLICY,
+  comment: "Peer-to-peer games: site policy plus relays, blob: media, camera and mic",
+  csp: GAMES_CSP,
+  permissions: GAMES_PERMISSIONS_POLICY,
+}));
 const adminId = await upsertPolicy(policyConfig({
   name: ADMIN_POLICY,
   comment: "Admin: GIS-aware CSP (report-only) + COOP required by Google sign-in",
@@ -213,6 +243,7 @@ log(`published -> ${fnArn}`);
 
 console.log(`\nCreated. Nothing is attached yet -- no viewer sees any change.`);
 console.log(`\n  site headers policy   ${siteId}`);
+console.log(`  games headers policy  ${gamesId}`);
 console.log(`  admin headers policy  ${adminId}`);
 console.log(`  admin rewrite fn      ${fnArn}`);
 console.log(`\nAttach with: node infra/wire-cloudfront.mjs`);

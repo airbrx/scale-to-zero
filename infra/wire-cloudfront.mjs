@@ -57,6 +57,7 @@ const S3_ORIGIN_ID = "s3-live";
 // against the lowercased key it receives in the event.
 const ORIGIN_HEADER = "x-stz-origin";
 const SITE_POLICY = "stz-site-headers";
+const GAMES_POLICY = "stz-games-headers";
 const ADMIN_POLICY = "stz-admin-headers";
 const REWRITE_FN = "stz-admin-rewrite";
 
@@ -129,6 +130,7 @@ const policyId = (name) => {
 };
 const siteHeadersId = policyId(SITE_POLICY);
 const adminHeadersId = policyId(ADMIN_POLICY);
+const gamesHeadersId = policyId(GAMES_POLICY);
 
 const fn = await aws(["cloudfront", "describe-function", "--name", REWRITE_FN, "--stage", "LIVE"],
   { region: "us-east-1", allowFail: true });
@@ -243,9 +245,28 @@ const adminBehavior = (headersId, fnArn) => ({
   ...OFF,
 });
 
+// /games/*: static pages like the rest of the site, but with the headers policy
+// that lets a peer-to-peer game reach Nostr relays and the camera
+// (infra/wire-edge.mjs). The page is all that needs it: Permissions-Policy and
+// CSP apply to the document, so the game's /assets/ keep the site's policy.
+const gamesBehavior = (headersId) => ({
+  PathPattern: "/games/*",
+  TargetOriginId: S3_ORIGIN_ID,
+  ViewerProtocolPolicy: "redirect-to-https",
+  AllowedMethods: {
+    Quantity: 2, Items: ["GET", "HEAD"],
+    CachedMethods: { Quantity: 2, Items: ["GET", "HEAD"] },
+  },
+  Compress: true,
+  CachePolicyId: CACHING_OPTIMIZED,
+  ResponseHeadersPolicyId: headersId,
+  FunctionAssociations: { Quantity: 0, Items: [] },
+  ...OFF,
+});
+
 const keep = (cfg.CacheBehaviors?.Items ?? []).filter(
-  (b) => !["/api/*", "/admin/*", "/admin*", "/admin"].includes(b.PathPattern));
-const behaviors = [...keep, apiBehavior(), adminBehavior(adminHeadersId, rewriteFnArn)];
+  (b) => !["/api/*", "/admin/*", "/admin*", "/admin", "/games/*"].includes(b.PathPattern));
+const behaviors = [...keep, apiBehavior(), adminBehavior(adminHeadersId, rewriteFnArn), gamesBehavior(gamesHeadersId)];
 cfg.CacheBehaviors = { Quantity: behaviors.length, Items: behaviors };
 
 // The public site had no security headers at all -- no policy on any behavior.
@@ -287,7 +308,7 @@ if (DRY) {
 
 await aws(["cloudfront", "update-distribution", "--id", DIST,
   "--if-match", etag, "--distribution-config", JSON.stringify(cfg)], { region: "us-east-1" });
-log(`/admin* -> ${S3_ORIGIN_ID} (cached, rewritten at the edge), /api/* -> ${LAMBDA_ORIGIN_ID}`);
+log(`/admin* -> ${S3_ORIGIN_ID} (cached, rewritten at the edge), /api/* -> ${LAMBDA_ORIGIN_ID}, /games/* -> ${S3_ORIGIN_ID} (games headers)`);
 
 
 console.log(`\nCloudFront takes ~5-10 min to redeploy, then:`);

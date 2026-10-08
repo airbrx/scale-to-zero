@@ -57,6 +57,7 @@ const { files: rendered, articles: sorted } = renderSite({
 
 await mkdir(path.join(SITE, "assets"), { recursive: true });
 for (const [name, body] of Object.entries(rendered)) {
+  await mkdir(path.dirname(path.join(SITE, name)), { recursive: true });
   await writeFile(path.join(SITE, name), body);
   if (name.endsWith(".html")) console.log(`  ${name}`);
 }
@@ -104,5 +105,13 @@ await cp(path.join(ROOT, "assets", "scorecard"), path.join(SITE, "assets", "scor
   filter: (src) => !path.extname(src) || (src.endsWith(".js") && path.basename(src) !== "memory.js"),
 });
 
-console.log(`\nbuilt ${sorted.length} article(s) + index, flat-stack, scorecard, feeds, taxonomy`);
+// The game's modules and stylesheet, as-is, like the scorecard's. The vendored
+// Trystero bundle travels with its licence; the vendor README stays in the repo.
+await rm(path.join(SITE, "assets", "yahtzee"), { recursive: true, force: true });
+await cp(path.join(ROOT, "assets", "yahtzee"), path.join(SITE, "assets", "yahtzee"), {
+  recursive: true,
+  filter: (src) => !path.extname(src) || [".js", ".css", ".txt"].includes(path.extname(src)),
+});
+
+console.log(`\nbuilt ${sorted.length} article(s) + index, flat-stack, scorecard, yahtzee, feeds, taxonomy`);
 console.log(`deploy with: node pipeline/deploy.mjs`);
