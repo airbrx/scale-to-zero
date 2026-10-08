@@ -434,6 +434,107 @@ The grade is a conversation starter, not an audit. Each principle is weighted eq
 ${foot(site)}`;
 }
 
+// ------------------------------------------------------------------ yahtzee
+/**
+ * A multiplayer game with no game server. The page is static; the browsers
+ * find each other through public Nostr relays and then talk directly over
+ * WebRTC (assets/yahtzee/). It lives under /games/ so the edge can give it the
+ * camera and microphone that every other page is denied (infra/wire-edge.mjs).
+ */
+export function yahtzeeHtml(site) {
+  const description = "Multiplayer Yahtzee with no game server: the browsers at the table talk to each other directly. Dice, chat, photos and video.";
+  return `${head(site, `Flat Yahtzee - ${site.shortName}`, description, `${site.baseUrl}/games/yahtzee.html`,
+    '<link rel="stylesheet" href="/assets/yahtzee/yahtzee.css">\n<script type="module" src="/assets/yahtzee/app.js"></script>')}
+<main class="wrap yz">
+  <section class="lede">
+    <h1>Flat Yahtzee</h1>
+    <p>Five dice, up to six players, and no server. Start a table, send the link, and the browsers that open it play each other directly. When the game ends and the tab closes, nothing is left running anywhere.</p>
+  </section>
+
+  <noscript><p class="sc-noscript">The game runs in your browser, so it needs JavaScript. That is what lets it run without a server.</p></noscript>
+
+  <form id="yz-setup" class="yz-setup" autocomplete="off">
+    <label for="yz-name" class="sc-label">Your name</label>
+    <div class="sc-row">
+      <input id="yz-name" name="name" type="text" maxlength="24" spellcheck="false" required>
+      <button id="yz-go" type="submit">Start a game</button>
+    </div>
+    <p id="yz-setup-note" class="sc-hint"></p>
+  </form>
+
+  <section id="yz-table" class="yz-table" hidden>
+    <div class="yz-bar">
+      <div class="yz-invite">
+        <label for="yz-link" class="sc-label">Invite link</label>
+        <div class="sc-row">
+          <input id="yz-link" type="text" readonly spellcheck="false">
+          <button id="yz-copy" type="button">Copy link</button>
+        </div>
+      </div>
+      <form id="yz-rename" class="yz-rename" autocomplete="off">
+        <label for="yz-me" class="sc-label">Playing as</label>
+        <div class="sc-row">
+          <input id="yz-me" type="text" maxlength="24" spellcheck="false">
+          <button type="submit" class="yz-btn-quiet">Rename</button>
+        </div>
+      </form>
+    </div>
+    <p id="yz-status" class="yz-status" aria-live="polite"></p>
+    <p id="yz-error" class="yz-error" role="alert" hidden></p>
+
+    <div class="yz-grid">
+      <div class="yz-play">
+        <p id="yz-turn" class="yz-turn" aria-live="polite"></p>
+        <div id="yz-dice" class="yz-dice" role="group" aria-label="Dice. Tap a die to hold it."></div>
+        <div class="yz-actions">
+          <button id="yz-roll" type="button">Roll</button>
+          <p id="yz-play-for" class="sc-hint" hidden></p>
+        </div>
+        <div id="yz-host" class="yz-host" hidden></div>
+        <div class="yz-card-wrap"><table id="yz-card" class="yz-card"></table></div>
+        <ol id="yz-log" class="yz-log" aria-label="What happened"></ol>
+      </div>
+
+      <aside class="yz-side">
+        <div class="yz-video-head">
+          <h2>Table</h2>
+          <button id="yz-cam" type="button" class="yz-btn-quiet">Turn on camera</button>
+        </div>
+        <div id="yz-video" class="yz-video"></div>
+        <ol id="yz-chat-list" class="yz-chat-list" aria-label="Chat" aria-live="polite"></ol>
+        <form id="yz-chat-form" class="yz-chat-form" autocomplete="off">
+          <label class="yz-photo-btn" title="Send a photo or GIF (up to 5 MB)">
+            <input id="yz-photo" type="file">
+            <span aria-hidden="true">+</span><span class="yz-sr">Send a photo or GIF</span>
+          </label>
+          <input id="yz-chat-input" type="text" maxlength="500" placeholder="Say something" aria-label="Chat message">
+          <button type="submit">Send</button>
+        </form>
+      </aside>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Where the server went</h2>
+${para(`A multiplayer game usually means a game server: a machine that holds the room, relays every move and runs whether anyone is playing or not. This one has none. The page is a static file like every other page here.
+
+When you open a table, your browser posts an encrypted note to a handful of public Nostr relays saying, in effect, "anyone with this room code, here is how to reach me." Other browsers with the same link find the note and connect to yours directly over WebRTC, the same technology video calls use. After that, dice, chat, photos and video go browser to browser. The relays never see a move.
+
+The room code lives after the # in the link, and browsers never send that part to a website, so not even this site's own logs can see which tables exist.`)}
+  </section>
+
+  <section class="section">
+    <h2>Who keeps the score</h2>
+${para(`Whoever starts the table is the host. The host's browser rolls the dice, checks every move and signs the game state, and the other browsers accept a state only if it carries that signature. The host can also roll and score for anyone who has stepped away, pass the turn, or sit a player out.
+
+If the host's tab closes, the table waits twelve seconds in case it was a reload, then the next player in seating order takes over. The creator signed the seating list when each player joined, so everyone can check that the new host was entitled to take over, and the game carries on from the last state everyone already had.
+
+What it gives up: the host rolls the dice, so you are trusting the host the way you would trust whoever holds the cup at a real table. Some networks, mostly strict corporate ones, block direct connections, and a player behind one will not be able to join without a relay server, which this page does not run. Video works best for four or five people, because each browser sends its camera separately to every other player.`)}
+  </section>
+</main>
+${foot(site)}`;
+}
+
 // -------------------------------------------------------------------- feeds
 export function feedXml(site, articles) {
   const items = articles.slice(0, 30).map((a) => `  <item>
@@ -539,6 +640,7 @@ export function renderSite({ site, tax, manifesto, articles }) {
   files["index.html"] = indexHtml(site, sorted);
   files["flat-stack.html"] = manifestoHtml(site, manifesto);
   files["scorecard.html"] = scorecardHtml(site);
+  files["games/yahtzee.html"] = yahtzeeHtml(site);
   files["feed.xml"] = feedXml(site, sorted);
   files["404.html"] = notFoundHtml(site);
 

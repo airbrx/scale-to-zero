@@ -195,6 +195,21 @@ server, no account, no clone. `node tools/scorecard.mjs <repo>` runs the same
 checks from a terminal. See `docs/SCORECARD.md` for how it reads repos over
 CORS and how to add a language.
 
+## Flat Yahtzee
+
+Live at `/games/yahtzee.html`. Multiplayer Yahtzee with no game server: browsers
+find each other through public Nostr relays ([Trystero](https://github.com/dmotz/trystero),
+vendored in `assets/yahtzee/vendor/` with the reason written down) and then talk
+directly over WebRTC: dice, chat, photos and GIFs, and optional video. The room
+creator's browser hosts and signs the game state; if it leaves, the next seated
+player takes over after 12 seconds, proven by a chain of signed seating lists
+(`assets/yahtzee/lib/auth.js`). Tests: `node test/yahtzee.test.mjs`.
+
+It sits under `/games/` so the edge can give those pages their own headers
+policy (relays, `blob:` media, camera and mic) without loosening the rest of
+the site. After pulling this in, once: `node infra/wire-edge.mjs` then
+`node infra/wire-cloudfront.mjs`.
+
 ## Publishing
 
 ```bash
