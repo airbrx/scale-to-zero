@@ -11,7 +11,7 @@ and pay for around the clock. Trystero posts the swap to public Nostr relays
 instead, encrypted, and from then on the browsers talk directly. No server of
 ours exists at any point, which is the whole point of the page.
 
-**Why vendored, not loaded from a CDN.** The site's CSP allows scripts from
+**Why vendored, not loaded from a CDN.** The Scale-to-Zero Report's CSP allows scripts from
 `'self'` only, and a game that breaks when a CDN does is a cascade failure we
 write articles about.
 

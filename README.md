@@ -17,7 +17,7 @@ More writing from airbrx lives in [The Cache](https://airbrx.ai/articles/).
 - **A scorecard fix.** If [the scorecard](https://scale-to-zero.com/scorecard.html)
   misjudged a repo, open an issue with the repo URL and the check that got it
   wrong. New language packs are one file each; see `docs/SCORECARD.md`.
-- **Code.** Every test must pass: `for f in test/*.test.mjs; do node $f; done`. No new dependencies without a reason
+- **Code.** Every test must pass: `for f in test/*.test.mjs games/*/test.mjs; do node $f; done`. No new dependencies without a reason
   written down next to them -- the manifesto applies to this repo too.
 
 Two halves:
@@ -199,11 +199,15 @@ CORS and how to add a language.
 
 Live at `/games/yahtzee.html`. Multiplayer Yahtzee with no game server: browsers
 find each other through public Nostr relays ([Trystero](https://github.com/dmotz/trystero),
-vendored in `assets/yahtzee/vendor/` with the reason written down) and then talk
-directly over WebRTC: dice, chat, photos and GIFs, and optional video. The room
-creator's browser hosts and signs the game state; if it leaves, the next seated
-player takes over after 12 seconds, proven by a chain of signed seating lists
-(`assets/yahtzee/lib/auth.js`). Tests: `node test/yahtzee.test.mjs`.
+vendored with the reason written down) and then talk directly over WebRTC: dice,
+chat, photos and GIFs, and optional video. The room creator's browser hosts and
+signs the game state; if it leaves, the next seated player takes over after 12
+seconds, proven by a chain of signed seating lists.
+
+The game is self-contained in `games/yahtzee/`: its own markup, stylesheet,
+standalone page and tests, nothing from the rest of this repository. To port it,
+copy that folder; its README says what a host needs. The site's page
+(`shared/render.mjs`) only wraps it. Tests: `node games/yahtzee/test.mjs`.
 
 It sits under `/games/` so the edge can give those pages their own headers
 policy (relays, `blob:` media, camera and mic) without loosening the rest of
@@ -254,6 +258,7 @@ pipeline/
   score.mjs              score  -> data/queue.json
   queue.mjs              review -> articles/<date>-<slug>.json
   build.mjs              render -> site/
+  static.mjs             the files served as-is (assets/, games/) -> site/
   deploy.mjs             ship   -> S3 + CloudFront
   daily.mjs              harvest + score + queue in one command
   lib/                   curl wrapper, RSS parser, scorer
@@ -269,6 +274,7 @@ test/                    node test/<name>.test.mjs
 docs/EDITORIAL.md        house style and the article formula
 docs/ADMIN.md            the admin: auth, publishing, stats
 assets/scorecard/        the repo scorecard: ES modules, no build step
+games/<name>/            a game, self-contained: copy the folder to port it
 tools/scorecard.mjs      the scorecard from a terminal
 docs/SCORECARD.md        how the scorecard works, and adding a language
 ```
@@ -287,5 +293,7 @@ Two pieces come from elsewhere under their own terms:
 - **The admin's editor** (`admin/editor`) builds against [CKEditor 5](https://ckeditor.com/ckeditor-5/),
   licensed GPL-2.0-or-later. It is a dependency, not code in this repository; the
   bundle it produces (`admin/ui/ckeditor.js`, not committed) is under CKEditor's license.
+- **Trystero** (`games/yahtzee/vendor/`), which the game uses to find the other
+  players, is MIT, as is the @noble/secp256k1 it bundles; the licences travel with it.
 - **Tone.js** (`stories/vendor/`), which plays the films' scores, is
   [MIT](https://github.com/Tonejs/Tone.js), with its licence beside it.

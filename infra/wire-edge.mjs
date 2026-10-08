@@ -87,7 +87,7 @@ const SITE_CSP = [
 ].join("; ");
 
 // /games/*: the public site's policy with three relaxations, each load-bearing
-// for the peer-to-peer game (assets/yahtzee/):
+// for the peer-to-peer game (games/yahtzee/):
 //   connect-src wss:     Trystero finds the other players through public Nostr
 //                        relays, chosen at random from its list
 //   blob: images/media   shared photos and GIFs are shown from blob: URLs, and

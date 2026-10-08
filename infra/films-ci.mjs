@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// The access CI needs to publish the films (.github/workflows/films.yml).
+// The access CI needs to publish the films (.github/workflows/films.yml) and
+// the site's static files (.github/workflows/site.yml).
 //
 //   node infra/films-ci.mjs --dry-run   say what it would do, change nothing
 //   node infra/films-ci.mjs             create or update it all
@@ -8,9 +9,10 @@
 // - An IAM role, stz-films-ci, that only a GitHub Actions run on this
 //   repository's main branch can assume, through the account's GitHub OIDC
 //   provider. No access keys exist anywhere.
-// - Its one permission: list, write and delete under films/ in the staging
-//   bucket. It cannot touch anything else in staging, nor the live bucket:
-//   the admin's publish takes films live, like everything else.
+// - Its one permission: list, write and delete under films/, assets/ and
+//   games/ in the staging bucket. It cannot touch anything else in staging
+//   (the articles, the admin's own files), nor the live bucket: the admin's
+//   publish takes them live, like everything else.
 // - The repository variables the workflow reads (FILMS_ROLE_ARN,
 //   STAGING_BUCKET, BUCKET_REGION), set with the GitHub CLI. Variables, not
 //   secrets: none of them is one, but they belong to this deployment.
@@ -27,6 +29,8 @@ const DRY = process.argv.includes("--dry-run");
 const STATUS = process.argv.includes("--status");
 const ROLE = "stz-films-ci";
 const POLICY = "films-to-staging";
+// what CI may write in staging: films.yml writes films/, site.yml the rest
+const PREFIXES = ["films/", "assets/", "games/"];
 const OIDC_HOST = "token.actions.githubusercontent.com";
 const STAGING = need("STAGING_BUCKET", "node infra/provision.mjs");
 const REGION = need("BUCKET_REGION");
@@ -80,8 +84,8 @@ const trust = {
 const permissions = {
   Version: "2012-10-17",
   Statement: [
-    { Effect: "Allow", Action: "s3:ListBucket", Resource: `arn:aws:s3:::${STAGING}`, Condition: { StringLike: { "s3:prefix": ["films/*", "films/"] } } },
-    { Effect: "Allow", Action: ["s3:PutObject", "s3:DeleteObject"], Resource: `arn:aws:s3:::${STAGING}/films/*` },
+    { Effect: "Allow", Action: "s3:ListBucket", Resource: `arn:aws:s3:::${STAGING}`, Condition: { StringLike: { "s3:prefix": PREFIXES.flatMap((p) => [`${p}*`, p]) } } },
+    { Effect: "Allow", Action: ["s3:PutObject", "s3:DeleteObject"], Resource: PREFIXES.map((p) => `arn:aws:s3:::${STAGING}/${p}*`) },
   ],
 };
 
@@ -96,7 +100,7 @@ if (STATUS) {
 
 if (DRY) {
   log(existing ? `would update ${ROLE}'s trust to main of ${repo}` : `would create ${ROLE}, assumable only from main of ${repo}`);
-  log(`would allow it: list, put, delete under s3://${STAGING}/films/ (nothing else)`);
+  log(`would allow it: list, put, delete under ${PREFIXES.map((p) => `s3://${STAGING}/${p}`).join(", ")} (nothing else)`);
   log(`would set repository variables FILMS_ROLE_ARN, STAGING_BUCKET, BUCKET_REGION on ${repo}`);
   process.exit(0);
 }
@@ -112,12 +116,12 @@ if (existing) {
   log("role created");
 }
 await aws(["iam", "put-role-policy", "--role-name", ROLE, "--policy-name", POLICY, "--policy-document", JSON.stringify(permissions)]);
-log(`policy ${POLICY}: films/ in the staging bucket only`);
+log(`policy ${POLICY}: ${PREFIXES.join(", ")} in the staging bucket only`);
 
 for (const [name, value] of [["FILMS_ROLE_ARN", roleArn], ["STAGING_BUCKET", STAGING], ["BUCKET_REGION", REGION]]) {
   await run("gh", ["variable", "set", name, "--repo", repo, "--body", value], { json: false });
   log(`repository variable ${name} set`);
 }
 saveEnv({ FILMS_ROLE_ARN: roleArn });
-console.log(`\n.env updated. Next push to main that touches stories/ publishes the films to staging;`);
-console.log(`run it now with: gh workflow run films.yml --repo ${repo}`);
+console.log(`\n.env updated. The next push to main that touches stories/, assets/ or games/ publishes it to staging;`);
+console.log(`run it now with: gh workflow run films.yml --repo ${repo} (or site.yml)`);

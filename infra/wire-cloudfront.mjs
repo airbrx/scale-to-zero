@@ -245,10 +245,11 @@ const adminBehavior = (headersId, fnArn) => ({
   ...OFF,
 });
 
-// /games/*: static pages like the rest of the site, but with the headers policy
+// /games/*: static files like the rest of the site, but with the headers policy
 // that lets a peer-to-peer game reach Nostr relays and the camera
-// (infra/wire-edge.mjs). The page is all that needs it: Permissions-Policy and
-// CSP apply to the document, so the game's /assets/ keep the site's policy.
+// (infra/wire-edge.mjs). Each game's page (games/<name>.html) and its files
+// (games/<name>/) both sit under it; only the page's headers matter, since
+// Permissions-Policy and CSP apply to the document.
 const gamesBehavior = (headersId) => ({
   PathPattern: "/games/*",
   TargetOriginId: S3_ORIGIN_ID,

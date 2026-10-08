@@ -5,8 +5,17 @@
 import { createRoom, Table, IMAGE_TYPES } from "./lib/table.js";
 import { CATEGORIES, UPPER, LABELS, legalCategories, scoreFor, totals } from "./lib/rules.js";
 import { MAX_ROLLS } from "./lib/game.js";
+import { MARKUP } from "./markup.js";
 
 const $ = (id) => document.getElementById(id);
+
+// The host page supplies one empty <div id="yahtzee">; the controls are ours.
+// MARKUP is a constant, so this is the one innerHTML that is safe.
+const mount = $("yahtzee");
+if (!mount) throw new Error('Flat Yahtzee needs an element with id="yahtzee" on the page');
+mount.classList.add("yz");
+mount.innerHTML = MARKUP;
+
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* fine */ } },

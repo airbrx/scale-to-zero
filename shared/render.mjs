@@ -438,13 +438,15 @@ ${foot(site)}`;
 /**
  * A multiplayer game with no game server. The page is static; the browsers
  * find each other through public Nostr relays and then talk directly over
- * WebRTC (assets/yahtzee/). It lives under /games/ so the edge can give it the
- * camera and microphone that every other page is denied (infra/wire-edge.mjs).
+ * WebRTC. The game is games/yahtzee/, self-contained: it draws its controls
+ * into the empty #yahtzee below, and this page adds only the site around it.
+ * It lives under /games/ so the edge can give it the camera and microphone
+ * that every other page is denied (infra/wire-edge.mjs).
  */
 export function yahtzeeHtml(site) {
   const description = "Multiplayer Yahtzee with no game server: the browsers at the table talk to each other directly. Dice, chat, photos and video.";
   return `${head(site, `Flat Yahtzee - ${site.shortName}`, description, `${site.baseUrl}/games/yahtzee.html`,
-    '<link rel="stylesheet" href="/assets/yahtzee/yahtzee.css">\n<script type="module" src="/assets/yahtzee/app.js"></script>')}
+    '<link rel="stylesheet" href="/games/yahtzee/yahtzee.css">\n<script type="module" src="/games/yahtzee/app.js"></script>')}
 <main class="wrap yz">
   <section class="lede">
     <h1>Flat Yahtzee</h1>
@@ -452,67 +454,7 @@ export function yahtzeeHtml(site) {
   </section>
 
   <noscript><p class="sc-noscript">The game runs in your browser, so it needs JavaScript. That is what lets it run without a server.</p></noscript>
-
-  <form id="yz-setup" class="yz-setup" autocomplete="off">
-    <label for="yz-name" class="sc-label">Your name</label>
-    <div class="sc-row">
-      <input id="yz-name" name="name" type="text" maxlength="24" spellcheck="false" required>
-      <button id="yz-go" type="submit">Start a game</button>
-    </div>
-    <p id="yz-setup-note" class="sc-hint"></p>
-  </form>
-
-  <section id="yz-table" class="yz-table" hidden>
-    <div class="yz-bar">
-      <div class="yz-invite">
-        <label for="yz-link" class="sc-label">Invite link</label>
-        <div class="sc-row">
-          <input id="yz-link" type="text" readonly spellcheck="false">
-          <button id="yz-copy" type="button">Copy link</button>
-        </div>
-      </div>
-      <form id="yz-rename" class="yz-rename" autocomplete="off">
-        <label for="yz-me" class="sc-label">Playing as</label>
-        <div class="sc-row">
-          <input id="yz-me" type="text" maxlength="24" spellcheck="false">
-          <button type="submit" class="yz-btn-quiet">Rename</button>
-        </div>
-      </form>
-    </div>
-    <p id="yz-status" class="yz-status" aria-live="polite"></p>
-    <p id="yz-error" class="yz-error" role="alert" hidden></p>
-
-    <div class="yz-grid">
-      <div class="yz-play">
-        <p id="yz-turn" class="yz-turn" aria-live="polite"></p>
-        <div id="yz-dice" class="yz-dice" role="group" aria-label="Dice. Tap a die to hold it."></div>
-        <div class="yz-actions">
-          <button id="yz-roll" type="button">Roll</button>
-          <p id="yz-play-for" class="sc-hint" hidden></p>
-        </div>
-        <div id="yz-host" class="yz-host" hidden></div>
-        <div class="yz-card-wrap"><table id="yz-card" class="yz-card"></table></div>
-        <ol id="yz-log" class="yz-log" aria-label="What happened"></ol>
-      </div>
-
-      <aside class="yz-side">
-        <div class="yz-video-head">
-          <h2>Table</h2>
-          <button id="yz-cam" type="button" class="yz-btn-quiet">Turn on camera</button>
-        </div>
-        <div id="yz-video" class="yz-video"></div>
-        <ol id="yz-chat-list" class="yz-chat-list" aria-label="Chat" aria-live="polite"></ol>
-        <form id="yz-chat-form" class="yz-chat-form" autocomplete="off">
-          <label class="yz-photo-btn" title="Send a photo or GIF (up to 5 MB)">
-            <input id="yz-photo" type="file">
-            <span aria-hidden="true">+</span><span class="yz-sr">Send a photo or GIF</span>
-          </label>
-          <input id="yz-chat-input" type="text" maxlength="500" placeholder="Say something" aria-label="Chat message">
-          <button type="submit">Send</button>
-        </form>
-      </aside>
-    </div>
-  </section>
+  <div id="yahtzee"></div>
 
   <section class="section">
     <h2>Where the server went</h2>

@@ -9,12 +9,13 @@
 // All the actual HTML lives in shared/render.mjs, which the admin Lambda also
 // uses. Same input, same bytes, whichever path published it.
 
-import { readFile, writeFile, mkdir, readdir, copyFile, rm, cp } from "node:fs/promises";
+import { readFile, writeFile, mkdir, readdir, rm } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 import { renderSite } from "../shared/render.mjs";
+import { copyStatic } from "./static.mjs";
 import { validator } from "../shared/schema.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -87,31 +88,8 @@ await writeFile(
   JSON.stringify(sorted.map((a) => ({ slug: a.slug, date: a.date, sourceUrl: a.source.url })), null, 2)
 );
 
-await copyFile(path.join(ROOT, "assets", "style.css"), path.join(SITE, "assets", "style.css"));
-await copyFile(path.join(ROOT, "assets", "favicon.svg"), path.join(SITE, "assets", "favicon.svg"));
-// The scorecard page's link-preview image (og:image / twitter:image).
-await copyFile(path.join(ROOT, "assets", "scorecard-social.png"), path.join(SITE, "assets", "scorecard-social.png"));
-// Browsers request /favicon.ico regardless of the <link>, and an S3 origin
-// behind OAC answers a miss with 403, not 404 -- which shows up as a scary red
-// console line on every page load. Serving the same SVG at that path silences it.
-await copyFile(path.join(ROOT, "assets", "favicon.svg"), path.join(SITE, "favicon.ico"));
+// Everything served as-is: stylesheet, icons, the scorecard's modules, games/.
+await copyStatic(SITE);
 
-// The scorecard's modules, as-is: no bundler, the browser loads them as ES
-// modules. Replaced wholesale so a deleted module does not linger in site/.
-await rm(path.join(SITE, "assets", "scorecard"), { recursive: true, force: true });
-await cp(path.join(ROOT, "assets", "scorecard"), path.join(SITE, "assets", "scorecard"), {
-  recursive: true,
-  // memory.js is the tests' fixture provider; the page never imports it.
-  filter: (src) => !path.extname(src) || (src.endsWith(".js") && path.basename(src) !== "memory.js"),
-});
-
-// The game's modules and stylesheet, as-is, like the scorecard's. The vendored
-// Trystero bundle travels with its licence; the vendor README stays in the repo.
-await rm(path.join(SITE, "assets", "yahtzee"), { recursive: true, force: true });
-await cp(path.join(ROOT, "assets", "yahtzee"), path.join(SITE, "assets", "yahtzee"), {
-  recursive: true,
-  filter: (src) => !path.extname(src) || [".js", ".css", ".txt"].includes(path.extname(src)),
-});
-
-console.log(`\nbuilt ${sorted.length} article(s) + index, flat-stack, scorecard, yahtzee, feeds, taxonomy`);
+console.log(`\nbuilt ${sorted.length} article(s) + index, flat-stack, scorecard, games, feeds, taxonomy`);
 console.log(`deploy with: node pipeline/deploy.mjs`);

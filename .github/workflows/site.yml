@@ -1,0 +1,77 @@
+# The site's static files (pipeline/static.mjs: assets/ and each games/<name>/)
+# to the staging bucket, on every push to main that touches them. The admin's
+# publish takes them live with everything else: nothing here writes to the
+# live site. Pages are not here: the admin renders those into staging itself.
+#
+# Same access as films.yml: a role assumed through GitHub's OIDC provider, set
+# up by infra/films-ci.mjs, that can write only under films/, assets/ and
+# games/ in the staging bucket, and only for a run on main. The repository is
+# public and so are its logs: the account id and the bucket name are masked,
+# and the sync reports errors only.
+
+name: site
+
+on:
+  push:
+    branches: [main]
+    paths: ["assets/**", "games/**", "pipeline/static.mjs", ".github/workflows/site.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: site
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # the games' own tests first; a failure stops here, before the bucket
+      - name: Test the games
+        run: for t in games/*/test.mjs; do node "$t"; done
+
+      - name: Collect the static files
+        run: node pipeline/static.mjs --out out
+
+      - name: Mask the deployment's names
+        run: |
+          echo "::add-mask::${{ vars.STAGING_BUCKET }}"
+          echo "::add-mask::${{ vars.FILMS_ROLE_ARN }}"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.FILMS_ROLE_ARN }}
+          aws-region: ${{ vars.BUCKET_REGION }}
+          mask-aws-account-id: true
+
+      # assets/ and each games/<name>/ mirror the repository, --delete
+      # included. games/ itself is not synced: the game pages
+      # (games/<name>.html) sit there too, and the admin renders those.
+      # Cache headers and content types match pipeline/deploy.mjs and
+      # admin/lib/store.mjs, and the publish copies them to live unchanged.
+      - name: Sync to staging
+        env:
+          STAGING_BUCKET: ${{ vars.STAGING_BUCKET }}
+        run: |
+          cc="public,max-age=300,s-maxage=31536000"
+          sync() {
+            aws s3 sync "out/$1/" "s3://${STAGING_BUCKET}/$1/" --delete --only-show-errors --cache-control "$cc" \
+              --exclude "*.js" --exclude "*.css"
+            aws s3 sync "out/$1/" "s3://${STAGING_BUCKET}/$1/" --delete --only-show-errors --cache-control "$cc" \
+              --exclude "*" --include "*.js" --content-type "text/javascript; charset=utf-8"
+            aws s3 sync "out/$1/" "s3://${STAGING_BUCKET}/$1/" --delete --only-show-errors --cache-control "$cc" \
+              --exclude "*" --include "*.css" --content-type "text/css; charset=utf-8"
+          }
+          sync assets
+          for d in out/games/*/; do sync "games/$(basename "$d")"; done
+          echo "static files synced to staging. Publish from the admin to take them live."

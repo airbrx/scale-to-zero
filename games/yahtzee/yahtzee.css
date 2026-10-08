@@ -1,6 +1,7 @@
-/* Flat Yahtzee. Builds on /assets/style.css: same tokens, same form pieces
-   (.sc-row, .sc-label, .sc-hint), no inline styles (the CSP has no
-   'unsafe-inline'). */
+/* Flat Yahtzee. Needs only the colour and font tokens below, from the host
+   page's stylesheet (standalone.css here, /assets/style.css on the Scale-to-Zero
+   Report): --ink --ink-soft --ink-faint --card --rule --accent --accent-2
+   --mono --serif. No inline styles (the CSP has no 'unsafe-inline'). */
 
 .wrap.yz { max-width: 72rem; }
 .yz .lede, .yz .section { max-width: 46rem; }
@@ -8,6 +9,29 @@
 /* display:flex below would otherwise beat the hidden attribute */
 .yz [hidden] { display: none !important; }
 .yz-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ----------------------------------------------------------- form bits */
+.yz-label {
+  display: block; margin: 0 0 .45rem;
+  font-family: var(--mono); font-size: .7rem; text-transform: uppercase;
+  letter-spacing: .12em; color: var(--ink-faint);
+}
+.yz-row { display: flex; gap: .6rem; flex-wrap: wrap; }
+.yz-row input {
+  flex: 1 1 16rem; min-width: 0;
+  font: inherit; font-family: var(--mono); font-size: .92rem;
+  padding: .7rem .85rem; color: var(--ink);
+  background: var(--card); border: 1px solid var(--rule); border-radius: 3px;
+}
+.yz-row input:focus { outline: 2px solid var(--accent-2); outline-offset: 1px; }
+.yz-row button {
+  font: inherit; font-family: var(--mono); font-size: .78rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .08em;
+  padding: .7rem 1.15rem; border-radius: 3px; cursor: pointer;
+  background: var(--accent); color: #fff; border: 1px solid var(--accent);
+}
+.yz-row button:disabled { opacity: .55; cursor: progress; }
+.yz-hint { margin: .55rem 0 0; font-size: .82rem; color: var(--ink-faint); }
 
 /* ------------------------------------------------------------- top bar */
 .yz-bar { display: flex; flex-wrap: wrap; gap: 1rem 2rem; align-items: end; }
@@ -19,7 +43,7 @@
   background: var(--card); border: 1px solid var(--rule); border-left: 3px solid var(--accent); border-radius: 3px;
 }
 
-button.yz-btn-quiet, .sc-row button.yz-btn-quiet {
+button.yz-btn-quiet, .yz-row button.yz-btn-quiet {
   font: inherit; font-family: var(--mono); font-size: .7rem; font-weight: 600;
   text-transform: uppercase; letter-spacing: .08em;
   padding: .45rem .75rem; border-radius: 3px; cursor: pointer;
@@ -59,7 +83,7 @@ button.yz-btn-quiet:hover { color: var(--accent); border-color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { .die { transition: none; } .die.is-held { transform: none; } }
 
 .yz-actions { display: flex; flex-wrap: wrap; gap: .4rem 1rem; align-items: center; margin: 0 0 1.2rem; }
-.yz-actions .sc-hint { margin: 0; }
+.yz-actions .yz-hint { margin: 0; }
 #yz-roll {
   font: inherit; font-family: var(--mono); font-size: .78rem; font-weight: 600;
   text-transform: uppercase; letter-spacing: .08em;
